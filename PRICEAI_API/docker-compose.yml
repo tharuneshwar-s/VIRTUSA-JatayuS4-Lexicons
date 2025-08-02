@@ -1,0 +1,63 @@
+version: "3.8"
+
+services:
+  priceai-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: priceai-api
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=${PRICEAI_LOG_LEVEL:-INFO}
+      
+      # Database Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      
+      # API Configuration
+      - PRICEAI_WEBAPP_URL=${PRICEAI_WEBAPP_URL}
+      - PRICEAI_API_HOST=${PRICEAI_API_HOST:-0.0.0.0}
+      - PRICEAI_API_PORT=${PRICEAI_API_PORT:-8001}
+      
+      # Gemini AI Configuration
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      
+      # API Settings
+      - API_PREFIX=${API_PREFIX:-/api}
+      - API_VERSION=${API_VERSION:-v1}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      
+      # Logging
+      - LOGS_DIR=${LOGS_DIR:-logs}
+      
+    volumes:
+      - ./logs:/app/logs:rw
+      
+    ports:
+      - "8001:8001"
+      
+    networks:
+      - priceai-network
+      
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+
+
+networks:
+  priceai-network:
+    driver: bridge
+
+# Optional: Add external volumes for persistent data
+volumes:
+  priceai-logs:
+    driver: local

@@ -1,0 +1,24 @@
+# Core Dependencies
+asyncio-mqtt
+croniter
+python-dotenv
+tqdm
+
+# Schema Validation
+pydantic
+email-validator
+
+# Database
+supabase
+psycopg2-binary
+
+# Data Processing
+pandas
+numpy
+openpyxl
+geopy
+
+# Utilities
+pytz
+rich
+colorama

@@ -1,0 +1,15 @@
+# Core Framework
+fastapi
+uvicorn
+supabase
+
+# Configuration & Environment
+python-dotenv
+
+# Utilities & Formatting  
+rich
+
+# HTTP Clients
+aiohttp
+requests
+

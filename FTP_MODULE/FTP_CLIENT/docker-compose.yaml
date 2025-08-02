@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  healthcare-ftp-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthcare-ftp-service
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app/src
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      
+      # Database Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_ROLE_KEY=${SUPABASE_ROLE_KEY}
+      - SUPABASE_SCHEMA=${SUPABASE_SCHEMA:-public}
+      
+      # Processing Configuration
+      - DB_BATCH_SIZE=${DB_BATCH_SIZE:-25}
+      - DELETE_AFTER_PROCESS=${DELETE_AFTER_PROCESS:-true}
+      - UPLOAD_TO_SUPABASE=${UPLOAD_TO_SUPABASE:-true}
+      
+      # Database Tuning
+      - DB_RETRY_ATTEMPTS=${DB_RETRY_ATTEMPTS:-3}
+      - DB_CONNECTION_TIMEOUT=${DB_CONNECTION_TIMEOUT:-30}
+      
+      # Scheduling
+      - FETCH_CRON_EXPRESSION=${FETCH_CRON_EXPRESSION:-"*/1 * * * *"}
+      
+      # Storage
+      - STORAGE_BUCKET_NAME=${STORAGE_BUCKET_NAME:-hospital-prices-bucket}
+      - CONTAINER_FTP_MOUNT_PATH=/ftp_data
+      
+    volumes:
+      - ../FTP_SERVER:/ftp_data:ro
+      - ./logs:/app/logs:rw
+      
+    ports:
+      - "8080:8080" 
+      
+    networks:
+      - healthcare-net
+      
+    command: ["python", "-u", "main.py"]
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "python", "main.py", "--health"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    
+
+networks:
+  healthcare-net:
+    driver: bridge
+    
+# Optional: Add external volumes for persistent data
+volumes:
+  healthcare-logs:
+    driver: local
+  healthcare-data:
+    driver: local
