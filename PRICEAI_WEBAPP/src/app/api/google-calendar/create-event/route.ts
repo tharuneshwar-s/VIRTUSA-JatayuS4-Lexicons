@@ -51,71 +51,71 @@ export async function POST(request: NextRequest) {
       user.google_refresh_token
     );
 
-    // Test calendar access first and handle token refresh
-    console.log('Testing calendar access...');
-    const accessTest = await googleCalendarService.testCalendarAccess();
-    if (!accessTest.success) {
-      console.error('Calendar access test failed:', accessTest.error);
+    // // Test calendar access first and handle token refresh
+    // console.log('Testing calendar access...');
+    // const accessTest = await googleCalendarService.testCalendarAccess();
+    // if (!accessTest.success) {
+    //   console.error('Calendar access test failed:', accessTest.error);
       
-      // If we have a refresh token, try to refresh the access token
-      if (user.google_refresh_token) {
-        console.log('Attempting to refresh access token...');
-        try {
-          const refreshResult = await googleCalendarService.refreshAccessToken();
-          if (refreshResult.success && refreshResult.accessToken) {
-            // Update the user's access token in the database
-            const { error: updateError } = await supabase
-              .from('users')
-              .update({
-                google_access_token: refreshResult.accessToken,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', appointmentDetails.userId);
+    //   // If we have a refresh token, try to refresh the access token
+    //   if (user.google_refresh_token) {
+    //     console.log('Attempting to refresh access token...');
+    //     try {
+    //       const refreshResult = await googleCalendarService.refreshAccessToken();
+    //       if (refreshResult.success && refreshResult.accessToken) {
+    //         // Update the user's access token in the database
+    //         const { error: updateError } = await supabase
+    //           .from('users')
+    //           .update({
+    //             google_access_token: refreshResult.accessToken,
+    //             updated_at: new Date().toISOString(),
+    //           })
+    //           .eq('id', appointmentDetails.userId);
 
-            if (updateError) {
-              console.error('Error updating refreshed access token:', updateError);
-            } else {
-              console.log('Access token refreshed successfully');
-              // Set the new token and retry
-              googleCalendarService.setAccessToken(
-                refreshResult.accessToken,
-                user.google_refresh_token
-              );
-            }
-          } else {
-            console.error('Failed to refresh access token:', refreshResult.error);
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'Google Calendar authentication expired. Please reconnect your Google account.',
-                requiresReauth: true,
-              },
-              { status: 401 }
-            );
-          }
-        } catch (refreshError) {
-          console.error('Error during token refresh:', refreshError);
-          return NextResponse.json(
-            {
-              success: false,
-              error: 'Google Calendar authentication expired. Please reconnect your Google account.',
-              requiresReauth: true,
-            },
-            { status: 401 }
-          );
-        }
-      } else {
-        // No refresh token available, user needs to re-authenticate
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Google Calendar authentication expired. Please reconnect your Google account.',
-            requiresReauth: true,
-          },
-          { status: 401 }
-        );
-      }
-    }
+    //         if (updateError) {
+    //           console.error('Error updating refreshed access token:', updateError);
+    //         } else {
+    //           console.log('Access token refreshed successfully');
+    //           // Set the new token and retry
+    //           googleCalendarService.setAccessToken(
+    //             refreshResult.accessToken,
+    //             user.google_refresh_token
+    //           );
+    //         }
+    //       } else {
+    //         console.error('Failed to refresh access token:', refreshResult.error);
+    //         return NextResponse.json(
+    //           {
+    //             success: false,
+    //             error: 'Google Calendar authentication expired. Please reconnect your Google account.',
+    //             requiresReauth: true,
+    //           },
+    //           { status: 401 }
+    //         );
+    //       }
+    //     } catch (refreshError) {
+    //       console.error('Error during token refresh:', refreshError);
+    //       return NextResponse.json(
+    //         {
+    //           success: false,
+    //           error: 'Google Calendar authentication expired. Please reconnect your Google account.',
+    //           requiresReauth: true,
+    //         },
+    //         { status: 401 }
+    //       );
+    //     }
+    //   } else {
+    //     // No refresh token available, user needs to re-authenticate
+    //     return NextResponse.json(
+    //       {
+    //         success: false,
+    //         error: 'Google Calendar authentication expired. Please reconnect your Google account.',
+    //         requiresReauth: true,
+    //       },
+    //       { status: 401 }
+    //     );
+    //   }
+    // }
 
     console.log('Calendar access verified, creating event...');
 

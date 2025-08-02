@@ -12,6 +12,7 @@ import { Badge } from '../ui/badge';
 import { supabase } from '@/lib/supabase/supabase';
 import { formatCurrency, getCurrentDateTime, getCurrentTimeZone, isAtLeastHoursAhead, getAvailableTimeSlots, getCurrentDateString } from '@/lib/utils';
 import { openGoogleCalendar, downloadICSFile } from '@/lib/calendar';
+import { appointmentService, type AppointmentData } from '@/services/appointments/AppointmentService';
 
 interface AppointmentBookingProps {
   provider: any;
@@ -48,6 +49,8 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
   const [success, setSuccess] = useState(false);
   const [availableInsurancePlans, setAvailableInsurancePlans] = useState<any[]>([]);
   const [insuranceLoading, setInsuranceLoading] = useState(false);
+
+  const [buttonText, setButtonText] = useState('Book Appointment');
 
 
   const [bookedAppointmentData, setBookedAppointmentData] = useState<any>(null);
@@ -95,8 +98,10 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       url.searchParams.append('provider_id', provider.provider_id);
       url.searchParams.append('service_id', service.service_id);
 
+
       const response = await fetch(url.toString());
       if (!response.ok) {
+        console.warn(`API request failed with status ${response.status}`);
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
@@ -178,15 +183,15 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
     const selectedHour = parseInt(formData.appointmentTime.split(':')[0], 10);
     const selectedMinute = parseInt(formData.appointmentTime.split(':')[1], 10);
     let hour24 = selectedHour;
-    
+
     if (formData.appointmentPeriod === 'PM' && selectedHour !== 12) {
       hour24 = selectedHour + 12;
     } else if (formData.appointmentPeriod === 'AM' && selectedHour === 12) {
       hour24 = 0;
     }
-    
+
     const totalMinutes = hour24 * 60 + selectedMinute;
-    
+
     // Business hours: 9:00 AM (540 minutes) to 5:00 PM (1020 minutes)
     if (totalMinutes < 540 || totalMinutes > 1020) {
       setError('Appointments are only available between 9:00 AM and 5:00 PM');
@@ -198,38 +203,31 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       setError('Morning appointments start at 9:00 AM');
       return false;
     }
-    
+
     if (formData.appointmentPeriod === 'PM' && (selectedHour > 5 || (selectedHour === 5 && selectedMinute > 0))) {
       setError('Evening appointments end at 5:00 PM');
       return false;
     }
-
     // Ensure booking is at least 5 hours in advance
-    try {
-      if (!isAtLeastHoursAhead(
-        formData.appointmentDate,
-        formData.appointmentTime,
-        formData.appointmentPeriod,
-        bookInAdvance
-      )) {
-        const tz = getCurrentTimeZone();
-        const currentTime = getCurrentDateTime();
-        const timeStr = currentTime.toLocaleTimeString('en-US', { 
-          timeZone: tz, 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: true 
-        });
-        setError(
-          `Please book appointments at least ${bookInAdvance} hours in advance. Current time: ${timeStr} (${tz})`
-        );
-        return false;
-      }
-    } catch (error) {
-      setError('Error validating appointment time');
+    if (!isAtLeastHoursAhead(
+      formData.appointmentDate,
+      formData.appointmentTime,
+      formData.appointmentPeriod,
+      bookInAdvance
+    )) {
+      const tz = getCurrentTimeZone();
+      const currentTime = getCurrentDateTime();
+      const timeStr = currentTime.toLocaleTimeString('en-US', {
+        timeZone: tz,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      setError(
+        `Please book appointments at least ${bookInAdvance} hours in advance. Current time: ${timeStr} (${tz})`
+      );
       return false;
     }
-
     if (!formData.patientName.trim()) {
       setError('Please enter patient name');
       return false;
@@ -238,42 +236,36 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       setError('Please enter patient email');
       return false;
     }
-
     // Validate with current date and time
-    try {
-      const now = getCurrentDateTime();
-      const selectedDate = new Date(formData.appointmentDate + 'T' +
-        (formData.appointmentTime.length === 5 ? formData.appointmentTime : '00:00') + ':00');
-      let hour = parseInt(formData.appointmentTime.split(':')[0], 10);
-      let period = formData.appointmentPeriod;
-      if (period !== 'AM' && period !== 'PM') {
-        setError('Please select AM or PM');
-        return false;
-      }
-      if (period === 'PM' && hour < 12) hour += 12;
-      if (period === 'AM' && hour === 12) hour = 0;
-      selectedDate.setHours(hour);
-      selectedDate.setMinutes(parseInt(formData.appointmentTime.split(':')[1], 10));
-      if (selectedDate < now) {
-        setError('Please select a future date and time');
-        return false;
-      }
-
-      // Validate AM/PM for same-day bookings
-      const timeZone = getCurrentTimeZone();
-      const todayStr = now.toLocaleString('en-IN', { timeZone }).split(',')[0];
-      const currentHour = now.getHours();
-      const currentPeriod = currentHour >= 12 ? 'PM' : 'AM';
-      if (formData.appointmentDate === todayStr) {
-        // Cannot book morning slots after PM has started
-        if (formData.appointmentPeriod === 'AM' && currentPeriod === 'PM') {
-          setError('Morning slots have passed for today');
-          return false;
-        }
-      }
-    } catch (error) {
-      setError('Error validating appointment date and time');
+    const now = getCurrentDateTime();
+    const selectedDate = new Date(formData.appointmentDate + 'T' +
+      (formData.appointmentTime.length === 5 ? formData.appointmentTime : '00:00') + ':00');
+    let hour = parseInt(formData.appointmentTime.split(':')[0], 10);
+    let period = formData.appointmentPeriod;
+    if (period !== 'AM' && period !== 'PM') {
+      setError('Please select AM or PM');
       return false;
+    }
+    if (period === 'PM' && hour < 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+    selectedDate.setHours(hour);
+    selectedDate.setMinutes(parseInt(formData.appointmentTime.split(':')[1], 10));
+    if (selectedDate < now) {
+      setError('Please select a future date and time');
+      return false;
+    }
+
+    // Validate AM/PM for same-day bookings
+    const timeZone = getCurrentTimeZone();
+    const todayStr = now.toLocaleString('en-IN', { timeZone }).split(',')[0];
+    const currentHour = now.getHours();
+    const currentPeriod = currentHour >= 12 ? 'PM' : 'AM';
+    if (formData.appointmentDate === todayStr) {
+      // Cannot book morning slots after PM has started
+      if (formData.appointmentPeriod === 'AM' && currentPeriod === 'PM') {
+        setError('Morning slots have passed for today');
+        return false;
+      }
     }
 
     return true;
@@ -291,6 +283,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
 
     setLoading(true);
     setError(null);
+    setButtonText('Booking...');
 
     try {
       let estimatedCost = null;
@@ -302,37 +295,35 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       else {
         estimatedCost = provider.standardCharge || 0;
       }
-
       // Insert appointment into database
-      const { data, error: dbError } = await supabase
-        .from('appointments')
-        .insert({
-          user_id: user.id,
-          provider_id: provider.provider_id,
-          service_id: service.service_id,
-          appointment_date: formData.appointmentDate,
-          appointment_time: formData.appointmentTime,
-          appointment_period: formData.appointmentPeriod,
-          appointment_type: formData.appointmentType,
-          patient_name: formData.patientName,
-          patient_phone: formData.patientPhone,
-          patient_email: formData.patientEmail,
-          notes: formData.notes,
-          insurance_id: formData.insuranceId,
-          insurance_plan_name: selectedPlan?.insuranceName || null,
-          insurance_plan_type: selectedPlan?.insurancePlan || null,
-          estimated_cost: estimatedCost,
-          status: 'PENDING',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+      setButtonText('Inserting appointment...');
+      
+      const appointmentData: AppointmentData = {
+        user_id: user.id,
+        provider_id: provider.provider_id,
+        service_id: service.service_id,
+        appointment_date: formData.appointmentDate,
+        appointment_time: formData.appointmentTime,
+        appointment_period: formData.appointmentPeriod,
+        appointment_type: formData.appointmentType,
+        patient_name: formData.patientName,
+        patient_phone: formData.patientPhone || null,
+        patient_email: formData.patientEmail,
+        notes: formData.notes || null,
+        insurance_id: formData.insuranceId,
+        insurance_plan_name: selectedPlan?.insuranceName || null,
+        insurance_plan_type: selectedPlan?.insurancePlan || null,
+        estimated_cost: estimatedCost,
+        status: 'PENDING'
+      };
 
-      if (dbError) {
-        throw dbError;
-      }
+      console.log('[AppointmentBooking] Creating appointment:', appointmentData);
+      
+      const data = await appointmentService.createAppointment(appointmentData);
+      
+      console.log('[AppointmentBooking] Appointment created successfully:', data);
 
+      setButtonText('Sending confirmation...');
       // Send confirmation email
       try {
         await fetch('/api/send-appointment-email', {
@@ -356,8 +347,12 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
           })
         });
       } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
         // Don't fail the booking if email fails
       }
+
+
+      setButtonText('Syncing calendar...');
 
       // Sync with Google Calendar if enabled
       try {
@@ -387,13 +382,18 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
         if (!calendarResponse.ok) {
           const errorData = await calendarResponse.json();
           if (errorData.requiresReauth) {
+            console.warn('Google Calendar requires re-authentication:', errorData.error);
             // You could show a notification to the user here about calendar sync failure
             // and provide a link to reconnect their Google account
+          } else {
+            console.error('Calendar sync failed:', errorData.error);
           }
         } else {
           const calendarData = await calendarResponse.json();
+          console.log('Calendar event created successfully:', calendarData);
         }
       } catch (calendarError) {
+        console.error('Failed to sync with Google Calendar:', calendarError);
         // Don't fail the booking if calendar sync fails
       }
 
@@ -409,7 +409,8 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
         providerAddress: provider.providerAddress,
         patientEmail: formData.patientEmail
       });
-    
+
+
       setTimeout(() => {
         onClose();
         setSuccess(false);
@@ -429,7 +430,9 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       }, 1500);
 
     } catch (error: any) {
+      console.error('Error booking appointment:', error);
       setError(error.message || 'Failed to book appointment. Please try again.');
+      setButtonText('Book Appointment');
     } finally {
       setLoading(false);
     }
@@ -450,6 +453,10 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
   }, [availableSlots, availablePeriods, formData.appointmentDate, formData.appointmentTime, formData.appointmentPeriod]);
 
   if (!isOpen) return null;
+
+
+  console.log("Insurance Id: ", formData.insuranceId);
+  console.log("Insurance Plan: ", formData.selectedInsurancePlan);
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[2147483647] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
@@ -499,8 +506,8 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
               <p className="text-priceai-gray mb-6">
                 A confirmation email has been sent to {formData.patientEmail}
               </p>
-              
-           
+
+
             </div>
           ) : (
             <>
@@ -512,7 +519,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                   <Badge className="bg-priceai-blue/20 text-priceai-blue">
                     {service.service_name}
                   </Badge>
-                 
+
                 </div>
               </div>
 
@@ -650,7 +657,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                         {/* Disclaimer */}
+                    {/* Disclaimer */}
                     <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-sm ">
                       <div className="flex items-start gap-2">
                         <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -672,13 +679,12 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {availableInsurancePlans.map((plan) => (
-                            <Card 
-                              key={plan.id} 
-                              className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                                formData.insuranceId === plan.id 
-                                  ? 'ring-2 ring-priceai-blue bg-blue-50/50' 
+                            <Card
+                              key={plan.id}
+                              className={`cursor-pointer transition-all duration-200 hover:shadow-md ${formData.insuranceId === plan.id
+                                  ? 'ring-2 ring-priceai-blue bg-blue-50/50'
                                   : 'hover:border-priceai-blue/40'
-                              }`}
+                                }`}
                               onClick={() => handleInputChange('insuranceId', plan.id)}
                             >
                               <CardContent className="p-4">
@@ -740,12 +746,11 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                     )}
 
                     {/* Self Pay Option - Show as alternative */}
-                    <Card 
-                      className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                        formData.insuranceId === null 
-                          ? 'ring-2 ring-priceai-orange bg-orange-50/50' 
+                    <Card
+                      className={`cursor-pointer transition-all duration-200 hover:shadow-md ${formData.insuranceId === null
+                          ? 'ring-2 ring-priceai-orange bg-orange-50/50'
                           : 'hover:border-priceai-orange/40'
-                      }`}
+                        }`}
                       onClick={() => handleInputChange('insuranceId', null)}
                     >
                       <CardContent className="p-4">
@@ -777,8 +782,8 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                       </CardContent>
                     </Card>
 
-                   
-                 
+
+
 
                     {/* Show message if no insurance plans available */}
                     {availableInsurancePlans.length === 0 && (
@@ -822,10 +827,10 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                   {loading ? (
                     <span className="flex items-center gap-2">
                       <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                      Booking...
+                      {buttonText}
                     </span>
                   ) : (
-                    'Book Appointment'
+                    buttonText
                   )}
                 </Button>
               </div>
@@ -833,7 +838,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
           </CardFooter>
         )}
       </Card>
-      
+
 
     </div>
   );
