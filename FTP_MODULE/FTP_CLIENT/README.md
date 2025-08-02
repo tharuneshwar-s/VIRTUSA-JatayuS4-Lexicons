@@ -245,18 +245,6 @@ Insurance Benefits: ""
    docker-compose up --build
    ```
 
-5. **Service Commands**
-   ```bash
-   # Run single processing cycle
-   docker-compose exec healthcare-ftp-service python main.py --once
-   
-   # Perform health check
-   docker-compose exec healthcare-ftp-service python main.py --health
-   
-   # Test configuration
-   docker-compose exec healthcare-ftp-service python main.py --test
-   ```
-
 ### Method 2: Local Installation
 
 1. **Clone and setup virtual environment**

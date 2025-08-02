@@ -21,9 +21,6 @@ services:
       - PRICEAI_API_HOST=${PRICEAI_API_HOST:-0.0.0.0}
       - PRICEAI_API_PORT=${PRICEAI_API_PORT:-8001}
       
-      # Gemini AI Configuration
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      
       # API Settings
       - API_PREFIX=${API_PREFIX:-/api}
       - API_VERSION=${API_VERSION:-v1}
