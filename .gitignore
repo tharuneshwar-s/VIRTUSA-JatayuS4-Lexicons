@@ -23,6 +23,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+/logs/
 
 # Environment
 .env
@@ -44,6 +45,9 @@ data/processed/*
 data/failed/*
 !data/processed/.gitkeep
 !data/failed/.gitkeep
+/FTP_SERVER/*
+/FTP_SERVER/
+
 
 # Backups
 backups/*

@@ -32,8 +32,9 @@ RUN pip install --no-cache-dir --upgrade pip==23.3.1 && \
 # Copy application code
 COPY ./src /app/src
 COPY main.py /app/main.py
-COPY .env /app/.env
 
+# Copy .env file if it exists (optional)
+COPY .env* /app/
 
 # Set proper permissions
 RUN chown -R healthcare:healthcare /app && \

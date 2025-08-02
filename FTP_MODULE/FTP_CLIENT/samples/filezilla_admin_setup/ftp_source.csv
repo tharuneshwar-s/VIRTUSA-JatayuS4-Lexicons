@@ -1,0 +1,5 @@
+provider_name,ftp_host,ftp_port,ftp_username,ftp_password,remote_path,is_active
+Hospital_1,localhost,21,Hospital_1,h123,/hospital_1,true
+Hospital_2,localhost,21,Hospital_2,h123,/hospital_2,true
+Hospital_3,localhost,21,Hospital_3,h123,/hospital_3,true
+Hospital_4,localhost,21,Hospital_4,h123,/hospital_4,true

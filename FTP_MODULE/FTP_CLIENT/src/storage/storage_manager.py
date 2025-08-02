@@ -213,16 +213,69 @@ class StorageManager:
 
                 self.cli.info(f"[STORAGE]: Upload attempt {attempt + 1} for {filename}")
 
+                # Try service role first, then fallback to anon client if available
+                upload_successful = False
+                result = None
+
+                # Attempt 1: Use service role client (preferred)
+                if supabase_role:
+                    try:
+                        self.cli.info(
+                            f"[STORAGE]: Attempting upload with service role..."
+                        )
+                        result = supabase_role.storage.from_(self.bucket_name).upload(
+                            path=storage_path,
+                            file=file_content,
+                            file_options={
+                                "content-type": "text/csv",
+                                "cache-control": "3600",
+                                "upsert": "true",  # Allow overwriting if file exists
+                            },
+                        )
+                        upload_successful = True
+                        self.cli.info(f"[STORAGE]: Service role upload succeeded")
+                    except Exception as service_error:
+                        self.cli.warning(
+                            f"[STORAGE]: Service role upload failed: {str(service_error)}"
+                        )
+                        result = None
+                        upload_successful = False
+
+                # Attempt 2: Fallback to anonymous client if service role failed
+                if not upload_successful:
+                    try:
+                        self.cli.info(
+                            f"[STORAGE]: Attempting upload with anonymous client..."
+                        )
+                        result = supabase.storage.from_(self.bucket_name).upload(
+                            path=storage_path,
+                            file=file_content,
+                            file_options={
+                                "content-type": "text/csv",
+                                "cache-control": "3600",
+                                "upsert": "true",
+                            },
+                        )
+                        upload_successful = True
+                        self.cli.info(f"[STORAGE]: Anonymous client upload succeeded")
+                    except Exception as anon_error:
+                        self.cli.error(
+                            f"[STORAGE]: Anonymous client upload also failed: {str(anon_error)}"
+                        )
+                        raise Exception(
+                            f"Both service role and anonymous uploads failed. Service: {service_error if 'service_error' in locals() else 'N/A'}, Anon: {anon_error}"
+                        )
+
                 # Upload to Supabase Storage
-                result = supabase_role.storage.from_(self.bucket_name).upload(
-                    path=storage_path,
-                    file=file_content,
-                    file_options={
-                        "content-type": "text/csv",
-                        "cache-control": "3600",
-                        "upsert": "true",  # Allow overwriting if file exists
-                    },
-                )
+                # result = supabase_role.storage.from_(self.bucket_name).upload(
+                #     path=storage_path,
+                #     file=file_content,
+                #     file_options={
+                #         "content-type": "text/csv",
+                #         "cache-control": "3600",
+                #         "upsert": "true",  # Allow overwriting if file exists
+                #     },
+                # )
 
                 # Enhanced result validation
                 self.cli.info(

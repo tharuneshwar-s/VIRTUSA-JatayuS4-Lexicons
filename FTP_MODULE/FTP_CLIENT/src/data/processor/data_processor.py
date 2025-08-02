@@ -545,7 +545,7 @@ class DataProcessor:
             # Batch insert provider-service relationships with conflict resolution
             result = (
                 supabase.table("provider_services")
-                .upsert(provider_services_list, on_conflict="provider_id,service_id")
+                .upsert(provider_services_list)
                 .execute()
             )
 
@@ -581,7 +581,7 @@ class DataProcessor:
             # Batch insert service-insurance relationships with conflict resolution
             result = (
                 supabase.table("service_insurance")
-                .upsert(service_insurance_list, on_conflict="service_id,insurance_id")
+                .upsert(service_insurance_list)
                 .execute()
             )
 
@@ -629,12 +629,7 @@ class DataProcessor:
 
             # Batch insert service pricing with conflict resolution on composite key
             result = (
-                supabase.table("service_pricing")
-                .upsert(
-                    service_pricing_list,
-                    on_conflict="provider_id,service_id,insurance_id",
-                )
-                .execute()
+                supabase.table("service_pricing").upsert(service_pricing_list).execute()
             )
 
             inserted_count = len(result.data) if result.data else 0
