@@ -79,7 +79,7 @@ export default function ProviderRating({
           .eq('provider_id', provider.provider_id)
           .eq('service_id', service.service_id);
         
-        // console.log('Existing review check:', existingReviews, reviewError); // Debug log
+        // // console.log('Existing review check:', existingReviews, reviewError); // Debug log
         // User has reviewed if we found any reviews (array length > 0)
         setHasUserReviewed(!reviewError && existingReviews && existingReviews.length > 0);
       } else {

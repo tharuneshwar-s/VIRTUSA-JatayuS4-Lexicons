@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/supabase';
+import { AuthService } from '@/services/auth/AuthService';
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -22,68 +23,26 @@ export default function AuthCallback() {
           return;
         }
 
-        console.log("Session data after OAuth callback:", sessionData);
-
-        const user = sessionData?.session?.user;
-        const providerToken = sessionData?.session?.provider_token;
-        const providerRefreshToken = sessionData?.session?.refresh_token;
-        
-        if (!user) {
-          console.error('No user found in session');
-          setError('Authentication failed: No user found');
+        if (!sessionData.session) {
+          console.error('No session found after OAuth callback');
+          setError('Authentication failed: No session found');
           setTimeout(() => router.replace('/auth/login'), 2000);
           return;
         }
 
-        console.log('Authentication successful for user:', user.id);
+        // console.log("Session data after OAuth callback:", sessionData);
 
-        // Store Google Calendar tokens if available
-        if (providerToken) {
-          console.log('Storing Google Calendar tokens...');
-          try {
-            const { error: updateError } = await supabase
-              .from('users')
-              .upsert({
-                id: user.id,
-                email: user.email,
-                name: user.user_metadata?.full_name || user.user_metadata?.name,
-                avatar_url: user.user_metadata?.avatar_url,
-                google_access_token: providerToken,
-                google_refresh_token: providerRefreshToken,
-                google_calendar_enabled: true,
-                updated_at: new Date().toISOString(),
-              });
-
-            if (updateError) {
-              console.error('Error storing Google Calendar tokens:', updateError);
-              // Don't fail the login if we can't store calendar tokens
-            } else {
-              console.log('Google Calendar automatically connected!');
-            }
-          } catch (calendarError) {
-            console.error('Failed to store calendar tokens:', calendarError);
-            // Don't fail the login if calendar setup fails
-          }
-        } else {
-          // Still create/update user record without calendar tokens
-          try {
-            const { error: updateError } = await supabase
-              .from('users')
-              .upsert({
-                id: user.id,
-                email: user.email,
-                name: user.user_metadata?.full_name || user.user_metadata?.name,
-                avatar_url: user.user_metadata?.avatar_url,
-                updated_at: new Date().toISOString(),
-              });
-
-            if (updateError) {
-              console.error('Error updating user record:', updateError);
-            }
-          } catch (userError) {
-            console.error('Failed to update user record:', userError);
-          }
+        // Use the AuthService to handle user session
+        const result = await AuthService.handleUserSession(sessionData.session);
+        
+        if (!result.success) {
+          console.error('Failed to process user session:', result.error);
+          setError(`Authentication failed: ${result.error}`);
+          setTimeout(() => router.replace('/auth/login'), 2000);
+          return;
         }
+
+        // console.log('Authentication successful for user:', result.user?.id);
 
         // Redirect to home page
         router.replace('/');

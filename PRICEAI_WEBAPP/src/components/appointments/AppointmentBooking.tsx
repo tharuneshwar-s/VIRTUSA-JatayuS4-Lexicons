@@ -95,16 +95,12 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       url.searchParams.append('provider_id', provider.provider_id);
       url.searchParams.append('service_id', service.service_id);
 
-      console.log('Fetching insurance plans from:', url.toString());
-
       const response = await fetch(url.toString());
       if (!response.ok) {
-        console.warn(`API request failed with status ${response.status}`);
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Raw insurance data:', data);
 
       const processedPlans = data.map((plan: any) => {
         const parsedBenefits = plan.insurance_benefits
@@ -125,7 +121,6 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
         };
       });
 
-      console.log('Processed insurance plans:', processedPlans);
       setAvailableInsurancePlans(processedPlans);
     } catch (error) {
       console.error('Error fetching insurance plans:', error);
@@ -159,7 +154,6 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
           benefits: ['Nationwide coverage', 'Mental health services']
         }
       ];
-      console.log('Using mock insurance plans for testing');
       setAvailableInsurancePlans(mockPlans);
     } finally {
       setInsuranceLoading(false);
@@ -209,26 +203,33 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       setError('Evening appointments end at 5:00 PM');
       return false;
     }
+
     // Ensure booking is at least 5 hours in advance
-    if (!isAtLeastHoursAhead(
-      formData.appointmentDate,
-      formData.appointmentTime,
-      formData.appointmentPeriod,
-      bookInAdvance
-    )) {
-      const tz = getCurrentTimeZone();
-      const currentTime = getCurrentDateTime();
-      const timeStr = currentTime.toLocaleTimeString('en-US', { 
-        timeZone: tz, 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      });
-      setError(
-        `Please book appointments at least ${bookInAdvance} hours in advance. Current time: ${timeStr} (${tz})`
-      );
+    try {
+      if (!isAtLeastHoursAhead(
+        formData.appointmentDate,
+        formData.appointmentTime,
+        formData.appointmentPeriod,
+        bookInAdvance
+      )) {
+        const tz = getCurrentTimeZone();
+        const currentTime = getCurrentDateTime();
+        const timeStr = currentTime.toLocaleTimeString('en-US', { 
+          timeZone: tz, 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+        setError(
+          `Please book appointments at least ${bookInAdvance} hours in advance. Current time: ${timeStr} (${tz})`
+        );
+        return false;
+      }
+    } catch (error) {
+      setError('Error validating appointment time');
       return false;
     }
+
     if (!formData.patientName.trim()) {
       setError('Please enter patient name');
       return false;
@@ -237,36 +238,42 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       setError('Please enter patient email');
       return false;
     }
-    // Validate with current date and time
-    const now = getCurrentDateTime();
-    const selectedDate = new Date(formData.appointmentDate + 'T' +
-      (formData.appointmentTime.length === 5 ? formData.appointmentTime : '00:00') + ':00');
-    let hour = parseInt(formData.appointmentTime.split(':')[0], 10);
-    let period = formData.appointmentPeriod;
-    if (period !== 'AM' && period !== 'PM') {
-      setError('Please select AM or PM');
-      return false;
-    }
-    if (period === 'PM' && hour < 12) hour += 12;
-    if (period === 'AM' && hour === 12) hour = 0;
-    selectedDate.setHours(hour);
-    selectedDate.setMinutes(parseInt(formData.appointmentTime.split(':')[1], 10));
-    if (selectedDate < now) {
-      setError('Please select a future date and time');
-      return false;
-    }
 
-    // Validate AM/PM for same-day bookings
-    const timeZone = getCurrentTimeZone();
-    const todayStr = now.toLocaleString('en-IN', { timeZone }).split(',')[0];
-    const currentHour = now.getHours();
-    const currentPeriod = currentHour >= 12 ? 'PM' : 'AM';
-    if (formData.appointmentDate === todayStr) {
-      // Cannot book morning slots after PM has started
-      if (formData.appointmentPeriod === 'AM' && currentPeriod === 'PM') {
-        setError('Morning slots have passed for today');
+    // Validate with current date and time
+    try {
+      const now = getCurrentDateTime();
+      const selectedDate = new Date(formData.appointmentDate + 'T' +
+        (formData.appointmentTime.length === 5 ? formData.appointmentTime : '00:00') + ':00');
+      let hour = parseInt(formData.appointmentTime.split(':')[0], 10);
+      let period = formData.appointmentPeriod;
+      if (period !== 'AM' && period !== 'PM') {
+        setError('Please select AM or PM');
         return false;
       }
+      if (period === 'PM' && hour < 12) hour += 12;
+      if (period === 'AM' && hour === 12) hour = 0;
+      selectedDate.setHours(hour);
+      selectedDate.setMinutes(parseInt(formData.appointmentTime.split(':')[1], 10));
+      if (selectedDate < now) {
+        setError('Please select a future date and time');
+        return false;
+      }
+
+      // Validate AM/PM for same-day bookings
+      const timeZone = getCurrentTimeZone();
+      const todayStr = now.toLocaleString('en-IN', { timeZone }).split(',')[0];
+      const currentHour = now.getHours();
+      const currentPeriod = currentHour >= 12 ? 'PM' : 'AM';
+      if (formData.appointmentDate === todayStr) {
+        // Cannot book morning slots after PM has started
+        if (formData.appointmentPeriod === 'AM' && currentPeriod === 'PM') {
+          setError('Morning slots have passed for today');
+          return false;
+        }
+      }
+    } catch (error) {
+      setError('Error validating appointment date and time');
+      return false;
     }
 
     return true;
@@ -295,7 +302,8 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       else {
         estimatedCost = provider.standardCharge || 0;
       }
-         // Insert appointment into database
+
+      // Insert appointment into database
       const { data, error: dbError } = await supabase
         .from('appointments')
         .insert({
@@ -348,7 +356,6 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
           })
         });
       } catch (emailError) {
-        console.error('Failed to send confirmation email:', emailError);
         // Don't fail the booking if email fails
       }
 
@@ -380,18 +387,13 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
         if (!calendarResponse.ok) {
           const errorData = await calendarResponse.json();
           if (errorData.requiresReauth) {
-            console.warn('Google Calendar requires re-authentication:', errorData.error);
             // You could show a notification to the user here about calendar sync failure
             // and provide a link to reconnect their Google account
-          } else {
-            console.error('Calendar sync failed:', errorData.error);
           }
         } else {
           const calendarData = await calendarResponse.json();
-          console.log('Calendar event created successfully:', calendarData);
         }
       } catch (calendarError) {
-        console.error('Failed to sync with Google Calendar:', calendarError);
         // Don't fail the booking if calendar sync fails
       }
 
@@ -408,7 +410,6 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
         patientEmail: formData.patientEmail
       });
     
-  
       setTimeout(() => {
         onClose();
         setSuccess(false);
@@ -428,7 +429,6 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       }, 1500);
 
     } catch (error: any) {
-      console.error('Error booking appointment:', error);
       setError(error.message || 'Failed to book appointment. Please try again.');
     } finally {
       setLoading(false);
@@ -451,10 +451,6 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
 
   if (!isOpen) return null;
 
-
-  console.log("Insurance Id: ", formData.insuranceId);
-  console.log("Insurance Plan: ", formData.selectedInsurancePlan);
-  
   return (
     <div className="fixed inset-0 bg-black/60 z-[2147483647] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
       <Card className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-white relative shadow-2xl z-[2147483647]">
@@ -816,7 +812,10 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleBookAppointment}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleBookAppointment();
+                  }}
                   disabled={loading}
                   className="flex-1 bg-priceai-blue hover:bg-priceai-lightblue w-full"
                 >

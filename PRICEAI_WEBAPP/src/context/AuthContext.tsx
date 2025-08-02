@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/supabase';
+import { AuthService } from '@/services/auth/AuthService';
 
 type AuthContextType = {
   user: User | null;
@@ -35,6 +36,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error("Session check - Error getting user:", userError);
             setUser(null);
           } else if (userData?.user) {
+            // Process the existing session
+            await AuthService.handleUserSession(sessionData.session);
             setUser(userData.user);
           } else {
             setUser(null);
@@ -46,12 +49,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (event, session) => {
+          async (event, session) => {
             // console.log("Auth state changed - Event:", event);
-            // console.log("Auth state changed - Session:", session);
             
             if (session?.user) {
-              // console.log("Auth state changed - Setting user:", session.user);
+              // console.log("Auth state changed - Processing user session:", session.user.id);
+              
+              // Process user session and update database on every login/session change
+              if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                await AuthService.handleUserSession(session);
+              }
+              
               setUser(session.user);
             } else {
               // console.log("Auth state changed - Clearing user");
@@ -76,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     setLoading(true);
     try {
-      // console.log("Signing out user");
+      // // console.log("Signing out user");
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -84,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
       
-      // console.log("User signed out successfully");
+      // // console.log("User signed out successfully");
       setUser(null);
     } catch (error) {
       console.error("Unexpected error signing out:", error);

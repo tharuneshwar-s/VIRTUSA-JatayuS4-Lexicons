@@ -6,23 +6,23 @@ export async function POST(request: NextRequest) {
   try {
     
     // Debug: Check cookies
-    console.log('API: Checking authentication...');
-    console.log('API: Cookies present:', request.cookies.getAll().map(c => c.name));
+    // console.log('API: Checking authentication...');
+    // console.log('API: Cookies present:', request.cookies.getAll().map(c => c.name));
     
     // Check if user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    console.log('API: Auth check result:', { user: user?.email, error: authError });
+    // console.log('API: Auth check result:', { user: user?.email, error: authError });
     
     if (authError || !user) {
-      console.log('API: Authentication failed');
+      // console.log('API: Authentication failed');
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    // console.log('API: User authenticated:', user.email);
+    // // console.log('API: User authenticated:', user.email);
 
     const body = await request.json();
     const { provider_id, service_id, rating, reviews } = body;

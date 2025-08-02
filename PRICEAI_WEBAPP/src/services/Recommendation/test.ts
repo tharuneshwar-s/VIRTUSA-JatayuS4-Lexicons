@@ -62,18 +62,18 @@ const testSingleData = {
 
 // Test functions (uncomment to test)
 export async function testRecommendationServices() {
-  console.log("Testing Compare Providers Recommendation...");
+  // console.log("Testing Compare Providers Recommendation...");
   try {
     const compareResult = await generateCompareProvidersRecommendation(testCompareData);
-    console.log("Compare Result:", compareResult);
+    // console.log("Compare Result:", compareResult);
   } catch (error) {
     console.error("Compare Test Error:", error);
   }
 
-  console.log("Testing Single Provider Recommendation...");
+  // console.log("Testing Single Provider Recommendation...");
   try {
     const singleResult = await generateSingleProviderRecommendation(testSingleData);
-    console.log("Single Result:", singleResult);
+    // console.log("Single Result:", singleResult);
   } catch (error) {
     console.error("Single Test Error:", error);
   }

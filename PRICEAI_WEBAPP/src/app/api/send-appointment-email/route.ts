@@ -201,12 +201,12 @@ export async function POST(request: NextRequest) {
     };
 
     // Log the email attempt
-    console.log('📧 Sending appointment confirmation email to:', patientEmail);
+    // console.log('📧 Sending appointment confirmation email to:', patientEmail);
 
     // Send the email
     const info = await transporter.sendMail(mailOptions);
 
-    console.log('📧 Email sent successfully:', info.messageId);
+    // console.log('📧 Email sent successfully:', info.messageId);
 
     return NextResponse.json({ 
       success: true, 

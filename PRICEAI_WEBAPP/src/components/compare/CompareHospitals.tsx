@@ -182,7 +182,7 @@ function CompareHospitalInsuranceDetails() {
       return providersWithPricing;
 
     return [...providersWithPricing].sort((a, b) => {
-      // // console.log("providersWithPricing: ",providersWithPricing)
+      // // // console.log("providersWithPricing: ",providersWithPricing)
       const key = sortConfig.key;
       let aValue, bValue;
 
@@ -246,7 +246,7 @@ function CompareHospitalInsuranceDetails() {
         }
 
         const data = await response.json();
-        // // console.log("All Compare Insurance: ", data)
+        // // // console.log("All Compare Insurance: ", data)
         setInsurance(data);
       } catch (error) {
         console.error('Error fetching insurance data:', error);
@@ -341,7 +341,7 @@ function CompareHospitalInsuranceDetails() {
   };
 
 
-  console.log("providersWithPricing: ", providersWithPricing)
+  // console.log("providersWithPricing: ", providersWithPricing)
 
   return (
     <div className="fixed inset-0 bg-black/30 z-[49] flex justify-end">

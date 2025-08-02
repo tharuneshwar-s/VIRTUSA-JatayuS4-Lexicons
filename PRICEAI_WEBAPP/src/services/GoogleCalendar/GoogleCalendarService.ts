@@ -78,7 +78,7 @@ class GoogleCalendarService {
       const tz = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
       // Debug: Log the current credentials
       const credentials = this.oauth2Client.credentials;
-      console.log('OAuth2 credentials set:', !!credentials?.access_token);
+      // console.log('OAuth2 credentials set:', !!credentials?.access_token);
 
       // Convert appointment date and time to proper datetime format
       const { dateTime: startDateTime, endDateTime } = this.formatAppointmentDateTime(
@@ -88,7 +88,7 @@ class GoogleCalendarService {
         tz
       );
 
-      console.log('Formatted dates:', { startDateTime, endDateTime });
+      // console.log('Formatted dates:', { startDateTime, endDateTime });
 
       const event: CalendarEvent = {
         summary: `Medical Appointment - ${appointmentDetails.serviceName}`,
@@ -112,7 +112,7 @@ class GoogleCalendarService {
         },
       };
 
-      console.log('Calendar event object:', JSON.stringify(event, null, 2));
+      // console.log('Calendar event object:', JSON.stringify(event, null, 2));
 
       const response = await this.calendar.events.insert({
         calendarId: 'primary',
@@ -264,7 +264,7 @@ class GoogleCalendarService {
       const dateStr = date.includes('T') ? date.split('T')[0] : date;
       const timeStr = `${hour24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
       const fullDateTimeStr = `${dateStr}T${timeStr}`;
-      console.log('Building datetime from:', { date, time, period, dateStr, timeStr, fullDateTimeStr, tz });
+      // console.log('Building datetime from:', { date, time, period, dateStr, timeStr, fullDateTimeStr, tz });
 
       // For now, this is still local time, but the event will use the correct timeZone field
       const startDate = new Date(fullDateTimeStr);
@@ -279,7 +279,7 @@ class GoogleCalendarService {
 
       const startISO = startDate.toISOString();
       const endISO = endDate.toISOString();
-      console.log('Final datetime values:', { startISO, endISO, tz });
+      // console.log('Final datetime values:', { startISO, endISO, tz });
 
       return {
         dateTime: startISO,
@@ -330,12 +330,12 @@ class GoogleCalendarService {
    */
   async testCalendarAccess(): Promise<any> {
     try {
-      console.log('Testing calendar access...');
+      // console.log('Testing calendar access...');
       const response = await this.calendar.calendars.get({
         calendarId: 'primary',
       });
       
-      console.log('Calendar access successful:', response.data.summary);
+      // console.log('Calendar access successful:', response.data.summary);
       return {
         success: true,
         calendar: response.data,
@@ -354,7 +354,7 @@ class GoogleCalendarService {
    */
   async refreshAccessToken(): Promise<any> {
     try {
-      console.log('Attempting to refresh access token...');
+      // console.log('Attempting to refresh access token...');
       
       if (!this.oauth2Client.credentials?.refresh_token) {
         return {
@@ -369,7 +369,7 @@ class GoogleCalendarService {
         // Update the oauth2Client with new credentials
         this.oauth2Client.setCredentials(credentials);
         
-        console.log('Access token refreshed successfully');
+        // console.log('Access token refreshed successfully');
         return {
           success: true,
           accessToken: credentials.access_token,
