@@ -12,11 +12,6 @@ import {
   Star,
   X,
   User,
-  Calendar,
-  ThumbsUp,
-  MessageSquare,
-  Award,
-  Clock,
   Loader2
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -114,12 +109,12 @@ export default function ProviderRating({
         // Transform reviews data to match the expected format
         const transformedReviews = reviewsData.map((review: any) => ({
           id: review.review_id,
-          user: `User ${review.user_id.slice(-4)}`, // Show last 4 chars of user ID for privacy
           rating: review.rating,
           review: review.review_text,
           date: review.created_at,
           provider: review.provider_name,
-          service: review.service_name
+          service: review.service_name,
+          name: review.user_name || 'Anonymous',
         }));
         
         // Transform statistics data
@@ -190,7 +185,8 @@ export default function ProviderRating({
         provider_id: provider.provider_id,
         service_id: service.service_id,
         rating,
-        reviews: review.trim()
+        reviews: review.trim(),
+        user_id: user?.id,
       };
 
       const response = await fetch('/api/reviews', {
@@ -205,7 +201,7 @@ export default function ProviderRating({
       const data = await response.json();
 
       if (response.ok) {
-        alert('Thank you for your review! It has been submitted successfully.');
+        // alert('Thank you for your review! It has been submitted successfully.');
         setRating(0);
         setReview('');
         setActiveTab('reviews');
@@ -403,7 +399,7 @@ export default function ProviderRating({
                               <User className="w-5 h-5 text-priceai-blue" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-priceai-dark">{review.user}</h4>
+                              <h4 className="font-semibold text-priceai-dark">{review?.name}</h4>
                               <div className="flex items-center gap-2">
                                 <StarRating rating={review.rating} size={14} />
                                 <span className="text-sm text-priceai-gray">

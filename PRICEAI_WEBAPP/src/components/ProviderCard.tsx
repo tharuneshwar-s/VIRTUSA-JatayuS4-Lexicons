@@ -202,7 +202,7 @@ const ProviderCard = ({ isRecommended, provider, isSelfPay = null, hasInsurance 
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <Badge variant="outline" className="gap-1">
                             <Building2 className="w-3 h-3" />
-                            {selectedService?.setting}
+                            {provider?.service_setting}
                         </Badge>
 
                         {/* Star Rating Badge */}
@@ -246,14 +246,14 @@ const ProviderCard = ({ isRecommended, provider, isSelfPay = null, hasInsurance 
                         <div className="flex items-start gap-2 flex-1">
                             <div className="flex flex-col">
                                 <p className="flex-1 text-priceai-dark">
-                                    {selectedService?.serviceName}
+                                    {provider?.service_name}
                                 </p>
                             </div>
                         </div>
 
                         <Badge variant="secondary" className="gap-1">
                             <CodeIcon className="w-3 h-3" />
-                            {selectedService?.serviceCode}
+                            {provider?.service_code}
                         </Badge>
                     </div>
 

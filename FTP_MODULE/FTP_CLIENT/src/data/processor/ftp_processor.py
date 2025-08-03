@@ -214,6 +214,9 @@ class FTPProcessor:
                                 f"Failed to mark file {task.file_name} as failed"
                             )
 
+                    
+                    # Clean UP
+                    self.data_processor.clear_caches()
                 except Exception as e:
                     logger.error(
                         f"[FTP-PROCESSOR]: Unexpected error processing {task.file_name}: {e}"

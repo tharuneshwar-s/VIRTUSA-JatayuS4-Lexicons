@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { MapPin } from 'lucide-react';
 import { useLocationContext } from '@/context/LocationContext';
 import { LocationSearch } from '@/components/search/LocationSearch';
@@ -13,6 +13,9 @@ import AllHospitalSection from '@/components/AllHospitalSection'
 import { ProviderCardSkeleton } from '@/components/ProviderCard';
 import ViewHospitalDetails from '@/components/hospitals_details/ViewHospitalDetails';
 import CompareHospitalInsuranceDetails from '@/components/compare/CompareHospitals';
+import { useAuth } from '@/context/AuthContext';
+
+import { supabase } from '@/lib/supabase/supabase';
 
 interface Location {
   address: string;
@@ -27,6 +30,30 @@ interface Service {
 }
 
 function HomePage() {
+
+
+  const { getToken } = useAuth();
+
+  const [credentials, setCredentials] = React.useState<{ accessToken: string | null, refreshToken: string | null }>({ accessToken: null, refreshToken: null });
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const token = await getToken();
+        if (token) {
+          setCredentials({ accessToken: token.accessToken, refreshToken: token.refreshToken });
+          console.log("Token retrieved successfully:", token);
+        } else {
+          console.warn("No token found, user may not be authenticated.");
+        }
+      } catch (error) {
+        console.error("Unexpected error checking session:", error);
+
+      }
+    };
+
+    checkSession();
+  }, []);
 
   const { myCurrentLocation, selectedLocation } = useLocationContext();
   const { selectedService, allProviderCardsData, allProviderCardsDataBeforeFilter, setAllProviderCardsData, setAllProviderCardsDataBeforeFilter, setRecommendProviderCards, selectedProvider, openCompareProvider } = usePriceaiContext()
@@ -81,6 +108,11 @@ function HomePage() {
           distance: provider.provider_distance,
           isSelfPay: provider.is_self_pay,
           hasInsurance: provider.has_insurance,
+          service_name: provider.service_name,
+          service_code: provider.service_code,
+          service_category: provider.service_category,
+          service_setting: provider.service_setting,
+
         }));
 
         // Fetch rating data for providers
@@ -89,10 +121,10 @@ function HomePage() {
           const ratingResponse = await fetch(`/api/ratings/providers?providerIds=${providerIds}`, {
             credentials: 'include'
           });
-          
+
           if (ratingResponse.ok) {
             const ratingData = await ratingResponse.json();
-            
+
             // Merge rating data with provider data
             const enrichedData = transformedData.map(provider => {
               const ratingInfo = ratingData.ratings.find((r: any) => r.providerId === parseInt(provider.id));
@@ -102,7 +134,7 @@ function HomePage() {
                 totalReviews: ratingInfo?.totalReviews || 0
               };
             });
-            
+
             setAllProviderCardsData(enrichedData);
             setAllProviderCardsDataBeforeFilter(enrichedData.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0)));
             setRecommendProviderCards(enrichedData.slice(0, 3));
@@ -222,7 +254,7 @@ function HomePage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
             <h3 className="text-xl font-bold">Searching for providers and prices...</h3>
           </div>
-          
+
           <div className="grid grid-cols-3 max-lg:grid-cols-2 max-md:grid-cols-1 gap-6">
             {[...Array(6)].map((_, index) => (
               <ProviderCardSkeleton key={index} />
@@ -266,7 +298,7 @@ function HomePage() {
       {/* MCP-Powered Healthcare AI Chatbot */}
       {/*<ChatbotProvider /> */}
 
-    
+
     </div>
   )
 }

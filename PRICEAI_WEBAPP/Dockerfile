@@ -1,12 +1,10 @@
-# Development Dockerfile
+# Simple development Dockerfile
 FROM node:18-alpine
-
-RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json package-lock.json* ./
 
 # Install dependencies
 RUN npm ci
@@ -17,7 +15,7 @@ COPY . .
 # Expose port
 EXPOSE 3001
 
-# Set environment
+# Set environment variables
 ENV NODE_ENV=development
 ENV PORT=3001
 

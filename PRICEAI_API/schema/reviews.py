@@ -49,6 +49,7 @@ class Review(ReviewBase):
     provider_state: Optional[str] = Field(None, description="State of the provider")
     service_name: Optional[str] = Field(None, description="Name of the service")
     service_category: Optional[str] = Field(None, description="Category of the service")
+    user_name: Optional[str] = Field(None, description="Name of the user")
 
     class Config:
         from_attributes = True

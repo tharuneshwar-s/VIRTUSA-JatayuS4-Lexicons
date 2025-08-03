@@ -49,11 +49,7 @@ class AppointmentService {
     appointmentData: AppointmentData
   ): Promise<any> {
     try {
-      console.log(
-        "[AppointmentService] Creating appointment with data:",
-        appointmentData
-      );
-
+  
       // Call the API endpoint instead of direct Supabase call
       const response = await fetch('/api/appointments/create', {
         method: 'POST',
@@ -74,10 +70,7 @@ class AppointmentService {
         throw new Error('Invalid response from appointment creation API');
       }
 
-      console.log(
-        "[AppointmentService] Appointment created successfully:",
-        result.data
-      );
+ 
       return result.data;
     } catch (error: any) {
       console.error("[AppointmentService] Error creating appointment:", error);

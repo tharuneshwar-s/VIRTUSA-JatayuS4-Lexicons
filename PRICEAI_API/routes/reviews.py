@@ -67,7 +67,8 @@ async def get_reviews(
             created_at,
             updated_at,
             providers!inner(provider_name, provider_city, provider_state),
-            services!inner(service_name, service_category)
+            services!inner(service_name, service_category),
+            users!inner(name)
         """
         )
 
@@ -120,9 +121,10 @@ async def get_reviews(
                 "provider_state": review.get("providers", {}).get("provider_state"),
                 "service_name": review.get("services", {}).get("service_name"),
                 "service_category": review.get("services", {}).get("service_category"),
+                "user_name": review.get("users", {}).get("name"),
             }
             transformed_reviews.append(transformed_review)
-
+            
         filter_info = []
         if provider_id:
             filter_info.append(f"provider_id: {provider_id}")

@@ -112,6 +112,10 @@ class ProviderWithPricing(BaseModel):
         provider_distance: Distance from user's location (if provided)
         is_self_pay: Whether this is a self-pay option
         has_insurance: Whether insurance is being used
+        service_name: Name of the service being offered
+        service_code: Code of the service (if applicable)
+        service_category: Category of the service
+        service_setting: Setting in which the service is provided (e.g., outpatient, inpatient)
     """
 
     provider_id: str = Field(..., description="Unique identifier for the provider")
@@ -153,6 +157,19 @@ class ProviderWithPricing(BaseModel):
     )
     is_self_pay: bool = Field(False, description="Whether this is a self-pay option")
     has_insurance: bool = Field(False, description="Whether insurance is being used")
+    
+    service_name: Optional[str] = Field(
+        None, description="Name of the service being offered"
+    )
+    service_code: Optional[str] = Field(
+        None, description="Code of the service (if applicable)"
+    )
+    service_category: Optional[str] = Field(
+        None, description="Category of the service"
+    )
+    service_setting: Optional[str] = Field(
+        None, description="Setting in which the service is provided (e.g., outpatient, inpatient)"
+    )
 
     class Config:
         json_schema_extra = {
@@ -174,6 +191,10 @@ class ProviderWithPricing(BaseModel):
                 "provider_distance": 3.2,
                 "is_self_pay": False,
                 "has_insurance": True,
+                "service_name": "Comprehensive Metabolic Panel",
+                "service_code": "CMP123",
+                "service_category": "Diagnostic",
+                "service_setting": "Outpatient",
             }
         }
 

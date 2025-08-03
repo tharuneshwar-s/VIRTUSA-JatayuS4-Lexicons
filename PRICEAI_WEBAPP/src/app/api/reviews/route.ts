@@ -1,31 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {supabase} from '@/lib/supabase/supabase'
+import {createClient } from "@/lib/supabase/server";
 
 // POST /api/reviews - Submit a new review
 export async function POST(request: NextRequest) {
   try {
-    
-    // Debug: Check cookies
-    // console.log('API: Checking authentication...');
-    // console.log('API: Cookies present:', request.cookies.getAll().map(c => c.name));
-    
-    // Check if user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    // console.log('API: Auth check result:', { user: user?.email, error: authError });
-    
-    if (authError || !user) {
-      // console.log('API: Authentication failed');
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
 
-    // // console.log('API: User authenticated:', user.email);
+    const supabase = await createClient();
 
+    
     const body = await request.json();
-    const { provider_id, service_id, rating, reviews } = body;
+    const { provider_id, service_id, rating, reviews, user_id } = body;
 
     // Validate required fields
     if (!provider_id || !service_id || !rating || !reviews) {
@@ -55,7 +39,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('reviews')
       .insert({
-        user_id: user.id,
+        user_id: user_id,
         provider_id,
         service_id,
         rating,

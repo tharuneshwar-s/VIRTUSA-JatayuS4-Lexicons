@@ -20,4 +20,10 @@ export interface ProviderCardData {
   // Rating fields
   averageRating?: number | null;
   totalReviews?: number;
+
+  // Additional fields
+  service_name?: string | null;
+  service_category?: string | null;
+  service_setting?: string | null;
+  service_code?: string | null;
 }

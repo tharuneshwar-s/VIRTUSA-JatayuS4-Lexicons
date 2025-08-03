@@ -361,7 +361,7 @@ function ViewHospitalDetails() {
                                                 </CardDescription>
                                             </div>
                                         </div>
-                                        {recommendedPlans && (
+                                        {recommendedPlans && sortedFilteredPlans.length !== 0 && !insuranceLoading && (
                                             <div className='w-fit'>
                                                 <Badge className="bg-priceai-green/10 text-priceai-green border-none px-3 py-1.5">
                                                     <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
@@ -609,7 +609,7 @@ function ViewHospitalDetails() {
                                                             ))}
                                                         </div>
                                                     </div>
-                                                ) : sortedFilteredPlans.length === 0 ? (
+                                                ) : (sortedFilteredPlans.length === 0 && !insuranceLoading) ? (
                                                     <div className="text-center py-12 bg-priceai-lightgray/10 rounded-lg mx-6 mb-6 border border-priceai-lightgray/30">
                                                         <div className="flex justify-center mb-4">
                                                             <Lightbulb className="w-16 h-16 text-priceai-gray/50" />

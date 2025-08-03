@@ -371,55 +371,71 @@ async def get_providers_with_pricing(
         provider_ids = [p["provider_id"] for p in providers_data]
         providers_map = {p["provider_id"]: p for p in providers_data}
 
-        # Step 2: Find providers offering the service (batch for efficiency)
-        valid_provider_ids = []
+        # Step 2: Get providers with their services and pricing using Supabase inner joins
+        # This replaces the separate HTTP calls with efficient database joins
+        providers_with_pricing_query = (
+            supabase.table("providers")
+            .select(
+                """
+                provider_id,
+                provider_services!inner(
+                    service_id,
+                    services!inner(service_id, service_name, service_category, setting, service_code)
+                ),
+                service_pricing(
+                    pricing_id,
+                    service_id,
+                    insurance_id,
+                    negotiated_price,
+                    standard_price,
+                    in_network
+                )
+            """
+            )
+            .eq("provider_services.service_id", service_id)
+            .in_("provider_id", provider_ids)
+        )
 
-        # Use HTTP requests to get provider services
-        async def get_provider_service(pid: str, sid: str):
-            async with httpx.AsyncClient(base_url=str(f"{PRICEAI_API_URL}")) as client:
-                params = {"provider_id": pid, "service_id": sid}
-                resp = await client.get("/provider-services", params=params)
-                if resp.status_code == 200:
-                    return resp.json()
-                return []
+        # Add insurance filter if specified
+        if insurance_id:
+            providers_with_pricing_query = providers_with_pricing_query.eq(
+                "service_pricing.insurance_id", insurance_id
+            )
+        elif not include_null_insurance:
+            providers_with_pricing_query = providers_with_pricing_query.not_.is_(
+                "service_pricing.insurance_id", "null"
+            )
 
-        # Use gather for concurrency
-        tasks = [get_provider_service(pid, service_id) for pid in provider_ids]
-        provider_services_results = await asyncio.gather(*tasks)
-        for pid, services in zip(provider_ids, provider_services_results):
-            if services:
-                valid_provider_ids.append(pid)
-        if not valid_provider_ids:
+        providers_pricing_response = providers_with_pricing_query.execute()
+
+        if not providers_pricing_response.data:
             return []
-
-        # Step 3: Get pricing for valid providers (batch for efficiency)
-        async def get_service_pricing(pid: str, sid: str, include_null: bool):
-            async with httpx.AsyncClient(base_url=str(f"{PRICEAI_API_URL}")) as client:
-                params = {
-                    "provider_id": pid,
-                    "service_id": sid,
-                    "include_null_insurance": include_null,
-                }
-                resp = await client.get("/service-pricing", params=params)
-                if resp.status_code == 200:
-                    return resp.json()
-                return []
-
-        pricing_tasks = [
-            get_service_pricing(pid, service_id, include_null_insurance)
-            for pid in valid_provider_ids
-        ]
-        pricing_results = await asyncio.gather(*pricing_tasks)
 
         results = []
         # Create a dictionary to track the best pricing per provider
         seen_providers = {}
 
-        # Process pricing results for each provider
-        for pid, pricing_list in zip(valid_provider_ids, pricing_results):
+        # Process the joined results
+        for provider_data in providers_pricing_response.data:
+            pid = provider_data.get("provider_id")
             provider_info = providers_map.get(pid)
             if not provider_info:
                 continue
+
+            # Get service data from the joined results
+            provider_services = provider_data.get("provider_services", [])
+            service_info = {}
+            if provider_services and len(provider_services) > 0:
+                services_data = provider_services[0].get("services", {})
+                service_info = {
+                    "service_name": services_data.get("service_name"),
+                    "service_category": services_data.get("service_category"),
+                    "setting": services_data.get("setting"),
+                    "service_code": services_data.get("service_code"),
+                }
+
+            # Get pricing data from the joined results
+            pricing_list = provider_data.get("service_pricing", [])
 
             # Handle case where provider has no pricing data
             if not pricing_list:
@@ -433,8 +449,12 @@ async def get_providers_with_pricing(
                     "provider_zip": provider_info.get("provider_zip"),
                     "provider_phone": provider_info.get("provider_phone"),
                     "provider_specialities": provider_info.get("provider_specialities"),
-                    "pricing_id": None,
                     "service_id": service_id,
+                    "service_name": service_info.get("service_name"),
+                    "service_category": service_info.get("service_category"),
+                    "service_setting": service_info.get("setting"),
+                    "pricing_id": None,
+                    "service_code": service_info.get("service_code"),
                     "insurance_id": None,
                     "negotiated_price": None,
                     "standard_price": None,
@@ -465,8 +485,12 @@ async def get_providers_with_pricing(
                     "provider_zip": provider_info.get("provider_zip"),
                     "provider_phone": provider_info.get("provider_phone"),
                     "provider_specialities": provider_info.get("provider_specialities"),
-                    "pricing_id": best_price.get("pricing_id"),
                     "service_id": best_price.get("service_id"),
+                    "service_name": service_info.get("service_name"),
+                    "service_category": service_info.get("service_category"),
+                    "service_setting": service_info.get("setting"),
+                    "service_code": service_info.get("service_code"),
+                    "pricing_id": best_price.get("pricing_id"),
                     "insurance_id": best_price.get("insurance_id"),
                     "negotiated_price": best_price.get("negotiated_price"),
                     "standard_price": best_price.get("standard_price"),
@@ -479,8 +503,8 @@ async def get_providers_with_pricing(
                         and best_price.get("in_network") is None
                     ),
                 }
-            # Distance calculation
 
+            # Distance calculation
             if latitude is not None and longitude is not None:
                 provider_lat = provider_info.get("provider_lat")
                 provider_lng = provider_info.get("provider_lng")
@@ -536,7 +560,6 @@ async def get_providers_with_pricing(
                     else x.get("provider_distance")
                 )
             )
-
         # Pagination
         return results[skip : skip + limit]
 

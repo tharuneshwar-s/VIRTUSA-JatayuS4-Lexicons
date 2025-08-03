@@ -8,6 +8,7 @@ export interface Review {
   review: string;
   helpful: number;
   service: string;
+  name?: string; // Optional, can be used for anonymous reviews
 }
 
 export interface ReviewStatistics {
@@ -32,6 +33,7 @@ export interface SubmitReviewRequest {
   service_id: string;
   rating: number;
   reviews: string;
+  user_id?:string;
 }
 
 export interface SubmitReviewResponse {

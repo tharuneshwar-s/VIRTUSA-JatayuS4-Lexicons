@@ -12,7 +12,7 @@ import { Badge } from '../ui/badge';
 import { supabase } from '@/lib/supabase/supabase';
 import { formatCurrency, getCurrentDateTime, getCurrentTimeZone, isAtLeastHoursAhead, getAvailableTimeSlots, getCurrentDateString } from '@/lib/utils';
 import { openGoogleCalendar, downloadICSFile } from '@/lib/calendar';
-import { appointmentService, type AppointmentData } from '@/services/appointments/AppointmentService';
+import {createClient} from '@/lib/supabase/client'
 
 interface AppointmentBookingProps {
   provider: any;
@@ -49,8 +49,6 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
   const [success, setSuccess] = useState(false);
   const [availableInsurancePlans, setAvailableInsurancePlans] = useState<any[]>([]);
   const [insuranceLoading, setInsuranceLoading] = useState(false);
-
-  const [buttonText, setButtonText] = useState('Book Appointment');
 
 
   const [bookedAppointmentData, setBookedAppointmentData] = useState<any>(null);
@@ -98,6 +96,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       url.searchParams.append('provider_id', provider.provider_id);
       url.searchParams.append('service_id', service.service_id);
 
+      console.log('Fetching insurance plans from:', url.toString());
 
       const response = await fetch(url.toString());
       if (!response.ok) {
@@ -106,6 +105,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       }
 
       const data = await response.json();
+      console.log('Raw insurance data:', data);
 
       const processedPlans = data.map((plan: any) => {
         const parsedBenefits = plan.insurance_benefits
@@ -126,6 +126,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
         };
       });
 
+      console.log('Processed insurance plans:', processedPlans);
       setAvailableInsurancePlans(processedPlans);
     } catch (error) {
       console.error('Error fetching insurance plans:', error);
@@ -159,6 +160,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
           benefits: ['Nationwide coverage', 'Mental health services']
         }
       ];
+      console.log('Using mock insurance plans for testing');
       setAvailableInsurancePlans(mockPlans);
     } finally {
       setInsuranceLoading(false);
@@ -183,15 +185,15 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
     const selectedHour = parseInt(formData.appointmentTime.split(':')[0], 10);
     const selectedMinute = parseInt(formData.appointmentTime.split(':')[1], 10);
     let hour24 = selectedHour;
-
+    
     if (formData.appointmentPeriod === 'PM' && selectedHour !== 12) {
       hour24 = selectedHour + 12;
     } else if (formData.appointmentPeriod === 'AM' && selectedHour === 12) {
       hour24 = 0;
     }
-
+    
     const totalMinutes = hour24 * 60 + selectedMinute;
-
+    
     // Business hours: 9:00 AM (540 minutes) to 5:00 PM (1020 minutes)
     if (totalMinutes < 540 || totalMinutes > 1020) {
       setError('Appointments are only available between 9:00 AM and 5:00 PM');
@@ -203,7 +205,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       setError('Morning appointments start at 9:00 AM');
       return false;
     }
-
+    
     if (formData.appointmentPeriod === 'PM' && (selectedHour > 5 || (selectedHour === 5 && selectedMinute > 0))) {
       setError('Evening appointments end at 5:00 PM');
       return false;
@@ -217,11 +219,11 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
     )) {
       const tz = getCurrentTimeZone();
       const currentTime = getCurrentDateTime();
-      const timeStr = currentTime.toLocaleTimeString('en-US', {
-        timeZone: tz,
-        hour: '2-digit',
+      const timeStr = currentTime.toLocaleTimeString('en-US', { 
+        timeZone: tz, 
+        hour: '2-digit', 
         minute: '2-digit',
-        hour12: true
+        hour12: true 
       });
       setError(
         `Please book appointments at least ${bookInAdvance} hours in advance. Current time: ${timeStr} (${tz})`
@@ -283,8 +285,8 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
 
     setLoading(true);
     setError(null);
-    setButtonText('Booking...');
 
+    console.log("Booking...")
     try {
       let estimatedCost = null;
       let selectedPlan: any = null;
@@ -295,35 +297,36 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       else {
         estimatedCost = provider.standardCharge || 0;
       }
-      // Insert appointment into database
-      setButtonText('Inserting appointment...');
       
-      const appointmentData: AppointmentData = {
-        user_id: user.id,
-        provider_id: provider.provider_id,
-        service_id: service.service_id,
-        appointment_date: formData.appointmentDate,
-        appointment_time: formData.appointmentTime,
-        appointment_period: formData.appointmentPeriod,
-        appointment_type: formData.appointmentType,
-        patient_name: formData.patientName,
-        patient_phone: formData.patientPhone || null,
-        patient_email: formData.patientEmail,
-        notes: formData.notes || null,
-        insurance_id: formData.insuranceId,
-        insurance_plan_name: selectedPlan?.insuranceName || null,
-        insurance_plan_type: selectedPlan?.insurancePlan || null,
-        estimated_cost: estimatedCost,
-        status: 'PENDING'
-      };
 
-      console.log('[AppointmentBooking] Creating appointment:', appointmentData);
-      
-      const data = await appointmentService.createAppointment(appointmentData);
-      
-      console.log('[AppointmentBooking] Appointment created successfully:', data);
 
-      setButtonText('Sending confirmation...');
+      const { data, error: dbError } = await supabase
+        .from('appointments')
+        .insert({
+          user_id: user.id,
+          provider_id: provider.provider_id,
+          service_id: service.service_id,
+          appointment_date: formData.appointmentDate,
+          appointment_time: formData.appointmentTime,
+          appointment_period: formData.appointmentPeriod,
+          appointment_type: formData.appointmentType,
+          patient_name: formData.patientName,
+          patient_phone: formData.patientPhone,
+          patient_email: formData.patientEmail,
+          notes: formData.notes,
+          insurance_id: formData.insuranceId,
+          insurance_plan_name: selectedPlan?.insuranceName || null,
+          insurance_plan_type: selectedPlan?.insurancePlan || null,
+          estimated_cost: estimatedCost,
+          status: 'PENDING',
+        })
+        .select()
+        .single();
+
+      if (dbError) {
+        throw dbError;
+      }
+
       // Send confirmation email
       try {
         await fetch('/api/send-appointment-email', {
@@ -350,9 +353,6 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
         console.error('Failed to send confirmation email:', emailError);
         // Don't fail the booking if email fails
       }
-
-
-      setButtonText('Syncing calendar...');
 
       // Sync with Google Calendar if enabled
       try {
@@ -409,8 +409,8 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
         providerAddress: provider.providerAddress,
         patientEmail: formData.patientEmail
       });
-
-
+    
+  
       setTimeout(() => {
         onClose();
         setSuccess(false);
@@ -432,7 +432,6 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
     } catch (error: any) {
       console.error('Error booking appointment:', error);
       setError(error.message || 'Failed to book appointment. Please try again.');
-      setButtonText('Book Appointment');
     } finally {
       setLoading(false);
     }
@@ -457,7 +456,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
 
   console.log("Insurance Id: ", formData.insuranceId);
   console.log("Insurance Plan: ", formData.selectedInsurancePlan);
-
+  
   return (
     <div className="fixed inset-0 bg-black/60 z-[2147483647] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
       <Card className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-white relative shadow-2xl z-[2147483647]">
@@ -506,8 +505,8 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
               <p className="text-priceai-gray mb-6">
                 A confirmation email has been sent to {formData.patientEmail}
               </p>
-
-
+              
+           
             </div>
           ) : (
             <>
@@ -519,7 +518,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                   <Badge className="bg-priceai-blue/20 text-priceai-blue">
                     {service.service_name}
                   </Badge>
-
+                 
                 </div>
               </div>
 
@@ -657,7 +656,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {/* Disclaimer */}
+                         {/* Disclaimer */}
                     <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-sm ">
                       <div className="flex items-start gap-2">
                         <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -679,12 +678,13 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {availableInsurancePlans.map((plan) => (
-                            <Card
-                              key={plan.id}
-                              className={`cursor-pointer transition-all duration-200 hover:shadow-md ${formData.insuranceId === plan.id
-                                  ? 'ring-2 ring-priceai-blue bg-blue-50/50'
+                            <Card 
+                              key={plan.id} 
+                              className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                                formData.insuranceId === plan.id 
+                                  ? 'ring-2 ring-priceai-blue bg-blue-50/50' 
                                   : 'hover:border-priceai-blue/40'
-                                }`}
+                              }`}
                               onClick={() => handleInputChange('insuranceId', plan.id)}
                             >
                               <CardContent className="p-4">
@@ -746,11 +746,12 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                     )}
 
                     {/* Self Pay Option - Show as alternative */}
-                    <Card
-                      className={`cursor-pointer transition-all duration-200 hover:shadow-md ${formData.insuranceId === null
-                          ? 'ring-2 ring-priceai-orange bg-orange-50/50'
+                    <Card 
+                      className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                        formData.insuranceId === null 
+                          ? 'ring-2 ring-priceai-orange bg-orange-50/50' 
                           : 'hover:border-priceai-orange/40'
-                        }`}
+                      }`}
                       onClick={() => handleInputChange('insuranceId', null)}
                     >
                       <CardContent className="p-4">
@@ -782,8 +783,8 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                       </CardContent>
                     </Card>
 
-
-
+                   
+                 
 
                     {/* Show message if no insurance plans available */}
                     {availableInsurancePlans.length === 0 && (
@@ -827,10 +828,10 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
                   {loading ? (
                     <span className="flex items-center gap-2">
                       <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                      {buttonText}
+                      Booking...
                     </span>
                   ) : (
-                    buttonText
+                    'Book Appointment'
                   )}
                 </Button>
               </div>
@@ -838,7 +839,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
           </CardFooter>
         )}
       </Card>
-
+      
 
     </div>
   );

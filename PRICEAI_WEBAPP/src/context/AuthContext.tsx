@@ -9,6 +9,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  getToken: () => Promise<any | null>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,17 +22,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkSession = async () => {
       try {
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-                
+
+        console.log("Checking session on AuthContext mount:", sessionData);
+
         if (sessionError) {
           console.error("Session check - Error getting session:", sessionError);
           setUser(null);
           setLoading(false);
           return;
         }
-        
+
         if (sessionData.session) {
           const { data: userData, error: userError } = await supabase.auth.getUser();
-                    
+
           if (userError) {
             console.error("Session check - Error getting user:", userError);
             setUser(null);
@@ -45,21 +48,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setUser(null);
         }
-        
+
         setLoading(false);
-        
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
             // console.log("Auth state changed - Event:", event);
-            
+
             if (session?.user) {
               // console.log("Auth state changed - Processing user session:", session.user.id);
-              
+
               // Process user session and update database on every login/session change
               if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                 await AuthService.handleUserSession(session);
               }
-              
+
               setUser(session.user);
             } else {
               // console.log("Auth state changed - Clearing user");
@@ -67,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
         );
-        
+
         return () => {
           subscription.unsubscribe();
         };
@@ -77,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     };
-    
+
     checkSession();
   }, []);
 
@@ -86,12 +89,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // // console.log("Signing out user");
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) {
         console.error("Error signing out:", error);
         throw error;
       }
-      
+
       // // console.log("User signed out successfully");
       setUser(null);
     } catch (error) {
@@ -102,10 +105,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const getToken = async () => {
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error("Error getting session for token:", sessionError);
+        return null;
+      }
+
+      if (sessionData.session) {
+        return {
+          accessToken: sessionData.session.access_token,
+          refreshToken: sessionData.session.refresh_token
+        }
+      } else {
+        console.warn("No active session found for token");
+        return null;
+      }
+    } catch (error) {
+      console.error("Unexpected error getting token:", error);
+      return null;
+    }
+  };
+
   const value = {
     user,
     loading,
     signOut,
+    getToken
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
