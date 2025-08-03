@@ -312,24 +312,6 @@ The application uses structured logging with multiple outputs:
 Log levels can be configured via the `PRICEAI_LOG_LEVEL` environment variable.
 
 
-## Deployment
-
-### Production Deployment
-
-1. Set production environment
-   ```bash
-   export ENVIRONMENT=production
-   ```
-
-2. Configure production settings
-   - Update database connection strings
-   - Set appropriate log levels
-   - Configure CORS settings
-
-3. Deploy with Docker Compose
-   ```bash
-   docker-compose -f docker-compose.yml up -d
-   ```
 
 
 ## Team
