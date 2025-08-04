@@ -199,7 +199,9 @@ Each component has detailed documentation:
 
 **Platform Overview**
 
-> [Watch the complete PriceAI platform demonstration](PLACEHOLDER_COMPLETE_PLATFORM_DEMO_URL)
+
+https://github.com/user-attachments/assets/85f90ff2-91cc-473b-95fa-f653477d236b
+
 
 This comprehensive demo showcases the entire PriceAI ecosystem including:
 - End-to-end healthcare pricing workflow
