@@ -165,7 +165,7 @@ const AppointmentsPage = () => {
 
       if (error) throw error;
 
-      console.log('Appointment cancelled successfully:', appointmentId);
+      //console.log('Appointment cancelled successfully:', appointmentId);
       // Send cancellation email
       if (appointmentToCancel) {
         try {

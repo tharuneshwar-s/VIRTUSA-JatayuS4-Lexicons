@@ -9,7 +9,6 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  getToken: () => Promise<any | null>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,30 +20,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        console.log("Checking session on AuthContext mount:", sessionData);
+        ////console.log("Checking session on AuthContext mount:", session);
 
-        if (sessionError) {
-          console.error("Session check - Error getting session:", sessionError);
+        // Check for session, access token, and refresh token validity
+        if (sessionError || !session || !session.access_token || !session.refresh_token) {
+     
+
+          await supabase.auth.signOut();
+          //console.log("Invalid session detected, signing out...");
+
           setUser(null);
           setLoading(false);
           return;
         }
 
-        if (sessionData.session) {
-          const { data: userData, error: userError } = await supabase.auth.getUser();
+        // Session is valid, proceed with user validation
+        const { data: userData, error: userError } = await supabase.auth.getUser();
 
-          if (userError) {
-            console.error("Session check - Error getting user:", userError);
-            setUser(null);
-          } else if (userData?.user) {
-            // Process the existing session
-            await AuthService.handleUserSession(sessionData.session);
-            setUser(userData.user);
-          } else {
-            setUser(null);
-          }
+        if (userError) {
+          console.error("Session check - Error getting user:", userError);
+          setUser(null);
+        } else if (userData?.user) {
+          // Process the existing session
+          //console.log("Valid user session found:", userData.user.id);
+          await AuthService.handleUserSession(session);
+          setUser(userData.user);
         } else {
           setUser(null);
         }
@@ -105,35 +107,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const getToken = async () => {
-    try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error("Error getting session for token:", sessionError);
-        return null;
-      }
-
-      if (sessionData.session) {
-        return {
-          accessToken: sessionData.session.access_token,
-          refreshToken: sessionData.session.refresh_token
-        }
-      } else {
-        console.warn("No active session found for token");
-        return null;
-      }
-    } catch (error) {
-      console.error("Unexpected error getting token:", error);
-      return null;
-    }
-  };
-
+ 
   const value = {
     user,
     loading,
     signOut,
-    getToken
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

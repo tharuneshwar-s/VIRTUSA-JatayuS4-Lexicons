@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import GoogleCalendarService from '@/services/GoogleCalendar/GoogleCalendarService';
-import { supabase } from '@/lib/supabase/supabase';
+import { createClient } from '@/lib/supabase/server';
+import { supabase } from '../../../../lib/supabase/supabase';
 
 export async function POST(request: NextRequest) {
   try {
     const appointmentDetails = await request.json();
+
+    const supabase = await createClient();
 
     if (!appointmentDetails.userId || !appointmentDetails.appointmentId) {
       return NextResponse.json(
@@ -16,85 +19,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user's Google Calendar tokens
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('google_access_token, google_refresh_token, google_calendar_enabled')
-      .eq('id', appointmentDetails.userId)
-      .single();
+    // Get user's session to access Google Calendar tokens
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    if (userError || !user?.google_calendar_enabled || !user?.google_access_token) {
+    console.log("Session data on create event:", session);
+
+    if (sessionError || !session || !session.access_token || !session.refresh_token) {
       console.log('Calendar access check:', {
-        userError: !!userError,
-        calendarEnabled: user?.google_calendar_enabled,
-        hasAccessToken: !!user?.google_access_token,
-        hasRefreshToken: !!user?.google_refresh_token,
+        sessionError: sessionError,
+        hasSession: session,
+        hasAccessToken: session?.access_token,
+        hasRefreshToken: session?.refresh_token,
       });
       return NextResponse.json({
         success: false,
-        error: 'Google Calendar not connected or enabled',
+        error: 'Google Calendar not connected or session expired',
         requiresAuth: true,
       });
     }
 
-    console.log('User calendar tokens found:', {
+    console.log('User calendar tokens found from session:', {
       userId: appointmentDetails.userId,
-      hasAccessToken: !!user.google_access_token,
-      hasRefreshToken: !!user.google_refresh_token,
-      calendarEnabled: user.google_calendar_enabled,
+      hasAccessToken: !!session.access_token,
+      hasRefreshToken: !!session.refresh_token,
     });
 
     // Create calendar event
     const googleCalendarService = new GoogleCalendarService();
     googleCalendarService.setAccessToken(
-      user.google_access_token,
-      user.google_refresh_token
+      session.access_token,
+      session.refresh_token
     );
 
-    // Test calendar access first and handle token refresh
-    console.log('Testing calendar access...');
-    const accessTest = await googleCalendarService.testCalendarAccess();
-    if (!accessTest.success) {
-      console.error('Calendar access test failed:', accessTest.error);
-      
-      // If we have a refresh token, try to refresh the access token
-      if (user.google_refresh_token) {
-        console.log('Attempting to refresh access token...');
-        try {
-          const refreshResult = await googleCalendarService.refreshAccessToken();
-          if (refreshResult.success && refreshResult.accessToken) {
-            // Update the user's access token in the database
-            const { error: updateError } = await supabase
-              .from('users')
-              .update({
-                google_access_token: refreshResult.accessToken,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', appointmentDetails.userId);
+    let eventResult = await googleCalendarService.createAppointmentEvent(appointmentDetails);
 
-            if (updateError) {
-              console.error('Error updating refreshed access token:', updateError);
-            } else {
-              console.log('Access token refreshed successfully');
-              // Set the new token and retry
-              googleCalendarService.setAccessToken(
-                refreshResult.accessToken,
-                user.google_refresh_token
-              );
-            }
-          } else {
-            console.error('Failed to refresh access token:', refreshResult.error);
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'Google Calendar authentication expired. Please reconnect your Google account.',
-                requiresReauth: true,
-              },
-              { status: 401 }
-            );
-          }
-        } catch (refreshError) {
-          console.error('Error during token refresh:', refreshError);
+    // Handle invalid_grant error by attempting token refresh
+    if (!eventResult.success && eventResult.error && (eventResult.error.includes('invalid_grant') || eventResult.error.includes('invalid credential'))) {
+      console.log('Received invalid token error, attempting token refresh...');
+      
+      try {
+        const refreshResult = await googleCalendarService.refreshAccessToken();
+        if (refreshResult.success && refreshResult.accessToken) {
+          console.log('Access token refreshed, retrying event creation...');
+          
+          // Set the new token and retry
+          googleCalendarService.setAccessToken(
+            refreshResult.accessToken,
+            session.refresh_token
+          );
+          
+          // Retry event creation
+          eventResult = await googleCalendarService.createAppointmentEvent(appointmentDetails);
+        } else {
+          console.error('Failed to refresh access token:', refreshResult.error);
           return NextResponse.json(
             {
               success: false,
@@ -104,8 +81,8 @@ export async function POST(request: NextRequest) {
             { status: 401 }
           );
         }
-      } else {
-        // No refresh token available, user needs to re-authenticate
+      } catch (refreshError) {
+        console.error('Error during token refresh:', refreshError);
         return NextResponse.json(
           {
             success: false,
@@ -114,45 +91,6 @@ export async function POST(request: NextRequest) {
           },
           { status: 401 }
         );
-      }
-    }
-
-    console.log('Calendar access verified, creating event...');
-
-    let eventResult = await googleCalendarService.createAppointmentEvent(appointmentDetails);
-
-    // Handle invalid_grant error by attempting token refresh
-    if (!eventResult.success && eventResult.error && eventResult.error.includes('invalid_grant')) {
-      console.log('Received invalid_grant error, attempting token refresh...');
-      
-      if (user.google_refresh_token) {
-        try {
-          const refreshResult = await googleCalendarService.refreshAccessToken();
-          if (refreshResult.success && refreshResult.accessToken) {
-            // Update the user's access token in the database
-            const { error: updateError } = await supabase
-              .from('users')
-              .update({
-                google_access_token: refreshResult.accessToken,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', appointmentDetails.userId);
-
-            if (!updateError) {
-              console.log('Access token refreshed, retrying event creation...');
-              // Set the new token and retry
-              googleCalendarService.setAccessToken(
-                refreshResult.accessToken,
-                user.google_refresh_token
-              );
-              
-              // Retry event creation
-              eventResult = await googleCalendarService.createAppointmentEvent(appointmentDetails);
-            }
-          }
-        } catch (refreshError) {
-          console.error('Error during token refresh:', refreshError);
-        }
       }
     }
 

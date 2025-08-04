@@ -31,30 +31,6 @@ interface Service {
 
 function HomePage() {
 
-
-  const { getToken } = useAuth();
-
-  const [credentials, setCredentials] = React.useState<{ accessToken: string | null, refreshToken: string | null }>({ accessToken: null, refreshToken: null });
-
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const token = await getToken();
-        if (token) {
-          setCredentials({ accessToken: token.accessToken, refreshToken: token.refreshToken });
-          console.log("Token retrieved successfully:", token);
-        } else {
-          console.warn("No token found, user may not be authenticated.");
-        }
-      } catch (error) {
-        console.error("Unexpected error checking session:", error);
-
-      }
-    };
-
-    checkSession();
-  }, []);
-
   const { myCurrentLocation, selectedLocation } = useLocationContext();
   const { selectedService, allProviderCardsData, allProviderCardsDataBeforeFilter, setAllProviderCardsData, setAllProviderCardsDataBeforeFilter, setRecommendProviderCards, selectedProvider, openCompareProvider } = usePriceaiContext()
 

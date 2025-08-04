@@ -15,8 +15,8 @@ export class AuthService {
   static async handleUserSession(session: Session): Promise<AuthServiceResult> {
     try {
       const user = session.user;
-      const providerToken = session.provider_token;
-      const providerRefreshToken = session.provider_refresh_token || session.refresh_token;
+      const providerToken = session.access_token;
+      const providerRefreshToken = session.refresh_token;
 
       if (!user) {
         console.error('No user found in session');

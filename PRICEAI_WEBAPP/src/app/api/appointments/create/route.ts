@@ -3,10 +3,8 @@ import { supabase } from '@/lib/supabase/supabase';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('[API] /api/appointments/create - Request received');
     
     const body = await request.json();
-    console.log('[API] Request body:', body);
 
     // Validate required fields
     const requiredFields = [
@@ -65,10 +63,10 @@ export async function POST(request: NextRequest) {
       status: body.status
     };
 
-    console.log('[API] Formatted insert data:', insertData);
+    //console.log('[API] Formatted insert data:', insertData);
 
     // Insert into database
-    console.log('[API] Inserting appointment into database...');
+    //console.log('[API] Inserting appointment into database...');
     const { data, error } = await supabase
       .from('appointments')
       .insert(insertData)
@@ -95,7 +93,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[API] Appointment created successfully:', data);
+    //console.log('[API] Appointment created successfully:', data);
     
     return NextResponse.json({
       success: true,

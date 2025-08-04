@@ -12,7 +12,8 @@ import { Badge } from '../ui/badge';
 import { supabase } from '@/lib/supabase/supabase';
 import { formatCurrency, getCurrentDateTime, getCurrentTimeZone, isAtLeastHoursAhead, getAvailableTimeSlots, getCurrentDateString } from '@/lib/utils';
 import { openGoogleCalendar, downloadICSFile } from '@/lib/calendar';
-import {createClient} from '@/lib/supabase/client'
+import {createClient} from '@/lib/supabase/client';
+import appointmentService from '@/services/appointments/AppointmentService';
 
 interface AppointmentBookingProps {
   provider: any;
@@ -96,7 +97,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       url.searchParams.append('provider_id', provider.provider_id);
       url.searchParams.append('service_id', service.service_id);
 
-      console.log('Fetching insurance plans from:', url.toString());
+      //console.log('Fetching insurance plans from:', url.toString());
 
       const response = await fetch(url.toString());
       if (!response.ok) {
@@ -105,7 +106,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       }
 
       const data = await response.json();
-      console.log('Raw insurance data:', data);
+      //console.log('Raw insurance data:', data);
 
       const processedPlans = data.map((plan: any) => {
         const parsedBenefits = plan.insurance_benefits
@@ -126,7 +127,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
         };
       });
 
-      console.log('Processed insurance plans:', processedPlans);
+      //console.log('Processed insurance plans:', processedPlans);
       setAvailableInsurancePlans(processedPlans);
     } catch (error) {
       console.error('Error fetching insurance plans:', error);
@@ -160,7 +161,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
           benefits: ['Nationwide coverage', 'Mental health services']
         }
       ];
-      console.log('Using mock insurance plans for testing');
+      //console.log('Using mock insurance plans for testing');
       setAvailableInsurancePlans(mockPlans);
     } finally {
       setInsuranceLoading(false);
@@ -286,7 +287,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
     setLoading(true);
     setError(null);
 
-    console.log("Booking...")
+    //console.log("Booking...")
     try {
       let estimatedCost = null;
       let selectedPlan: any = null;
@@ -300,32 +301,24 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
       
 
 
-      const { data, error: dbError } = await supabase
-        .from('appointments')
-        .insert({
-          user_id: user.id,
-          provider_id: provider.provider_id,
-          service_id: service.service_id,
-          appointment_date: formData.appointmentDate,
-          appointment_time: formData.appointmentTime,
-          appointment_period: formData.appointmentPeriod,
-          appointment_type: formData.appointmentType,
-          patient_name: formData.patientName,
-          patient_phone: formData.patientPhone,
-          patient_email: formData.patientEmail,
-          notes: formData.notes,
-          insurance_id: formData.insuranceId,
-          insurance_plan_name: selectedPlan?.insuranceName || null,
-          insurance_plan_type: selectedPlan?.insurancePlan || null,
-          estimated_cost: estimatedCost,
-          status: 'PENDING',
-        })
-        .select()
-        .single();
-
-      if (dbError) {
-        throw dbError;
-      }
+      const data = await appointmentService.createAppointment({
+        user_id: user.id,
+        provider_id: provider.provider_id,
+        service_id: service.service_id,
+        appointment_date: formData.appointmentDate,
+        appointment_time: formData.appointmentTime,
+        appointment_period: formData.appointmentPeriod,
+        appointment_type: formData.appointmentType,
+        patient_name: formData.patientName,
+        patient_phone: formData.patientPhone,
+        patient_email: formData.patientEmail,
+        notes: formData.notes,
+        insurance_id: formData.insuranceId,
+        insurance_plan_name: selectedPlan?.insuranceName || null,
+        insurance_plan_type: selectedPlan?.insurancePlan || null,
+        estimated_cost: estimatedCost,
+        status: 'PENDING',
+      });
 
       // Send confirmation email
       try {
@@ -390,7 +383,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
           }
         } else {
           const calendarData = await calendarResponse.json();
-          console.log('Calendar event created successfully:', calendarData);
+          //console.log('Calendar event created successfully:', calendarData);
         }
       } catch (calendarError) {
         console.error('Failed to sync with Google Calendar:', calendarError);
@@ -454,8 +447,8 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
   if (!isOpen) return null;
 
 
-  console.log("Insurance Id: ", formData.insuranceId);
-  console.log("Insurance Plan: ", formData.selectedInsurancePlan);
+  //console.log("Insurance Id: ", formData.insuranceId);
+  //console.log("Insurance Plan: ", formData.selectedInsurancePlan);
   
   return (
     <div className="fixed inset-0 bg-black/60 z-[2147483647] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
