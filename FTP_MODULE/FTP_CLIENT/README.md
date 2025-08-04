@@ -240,6 +240,21 @@ The sample configuration includes:
 - Remote directory paths for each hospital
 - Active status flags for monitoring
 
+**📁 Sample Hospital Data Files**
+> [sample_healthcare_datas/](../sample_healthcare_datas/) - Contains sample healthcare data files organized by city
+
+Available sample data by location:
+- **Bengaluru**: Apollo Hospital, Aster CMI Hospital, Cloudnine Hospital, Columbia Asia Hospital, Fortis Hospital, Hosmat Hospital, Manipal Hospital
+- **Chennai**: Multiple hospital data files
+- **Hyderabad**: Hospital pricing data samples
+- **Kerala**: Regional healthcare data
+- **Kolkata**: City-specific hospital files
+- **Mumbai**: Metropolitan healthcare data
+- **Puducherry**: Union territory data samples
+- **Telangana**: State healthcare pricing data
+
+Each location contains both CSV and Excel formats for comprehensive testing and demonstration purposes.
+
 ### Method 1: Docker Installation (Recommended)
 
 1. **Clone the repository**
