@@ -6,15 +6,15 @@ import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Phone, 
-  User, 
-  FileText, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Phone,
+  User,
+  FileText,
+  CheckCircle2,
+  XCircle,
   AlertCircle,
   Filter,
   Search
@@ -58,7 +58,7 @@ interface Appointment {
 const AppointmentsPage = () => {
   const { user } = useAuth();
   const supabase = createClientComponentClient();
-  
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,13 +94,13 @@ const AppointmentsPage = () => {
 
   const updateExpiredAppointments = async () => {
     if (!user) return;
-    
+
     try {
       // Get current date and time
       const now = new Date();
       const currentDate = now.toISOString().split('T')[0];
       const currentTime = now.toTimeString().split(' ')[0].substring(0, 5);
-      
+
       // Update appointments that are past their scheduled time
       const { error } = await supabase
         .from('appointments')
@@ -108,7 +108,7 @@ const AppointmentsPage = () => {
         .eq('user_id', user.id)
         .in('status', ['PENDING', 'CONFIRMED'])
         .or(`appointment_date.lt.${currentDate},and(appointment_date.eq.${currentDate},appointment_time.lt.${currentTime})`);
-      
+
       if (error) {
         console.error('Error updating expired appointments:', error);
       }
@@ -150,12 +150,14 @@ const AppointmentsPage = () => {
       return;
     }
 
+    
+
     setCancellingAppointmentId(appointmentId);
 
     try {
       // Get the appointment details before cancelling for email
       const appointmentToCancel = appointments.find(apt => apt.appointment_id === appointmentId);
-      
+
       const { error } = await supabase
         .from('appointments')
         .update({ status: 'CANCELLED' })
@@ -163,6 +165,7 @@ const AppointmentsPage = () => {
 
       if (error) throw error;
 
+      console.log('Appointment cancelled successfully:', appointmentId);
       // Send cancellation email
       if (appointmentToCancel) {
         try {
@@ -223,12 +226,12 @@ const AppointmentsPage = () => {
 
   const filteredAndSortedAppointments = appointments
     .filter(appointment => {
-      const matchesSearch = searchTerm === '' || 
+      const matchesSearch = searchTerm === '' ||
         appointment.providers.provider_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         appointment.services.service_name.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesStatus = statusFilter === 'ALL' || appointment.status === statusFilter;
-      
+
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
@@ -324,10 +327,10 @@ const AppointmentsPage = () => {
                 options={sortOptions}
                 value={sortBy}
                 onChange={setSortBy}
-                                className="text-sm h-12"
+                className="text-sm h-12"
 
               />
-            
+
             </div>
           </CardContent>
         </Card>
@@ -354,7 +357,7 @@ const AppointmentsPage = () => {
                 {appointments.length === 0 ? 'No Appointments Yet' : 'No Matching Appointments'}
               </h3>
               <p className="text-priceai-gray mb-4">
-                {appointments.length === 0 
+                {appointments.length === 0
                   ? 'Book your first appointment to get started with your healthcare journey.'
                   : 'Try adjusting your search criteria to find the appointments you\'re looking for.'
                 }
@@ -453,7 +456,7 @@ const AppointmentsPage = () => {
                           <div>#{appointment.appointment_id.slice(0, 8).toUpperCase()}</div>
                           <div>{appointment.appointment_type.replace('_', ' ')}</div>
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
                           {/* Calendar Actions for upcoming appointments */}
                           {(appointment.status === 'PENDING' || appointment.status === 'CONFIRMED') && (
@@ -498,12 +501,15 @@ const AppointmentsPage = () => {
                               </Button>
                             </>
                           )}
-                          
+
                           {(appointment.status === 'PENDING' || appointment.status === 'CONFIRMED') && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleCancelAppointment(appointment.appointment_id)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleCancelAppointment(appointment.appointment_id)
+                              }}
                               disabled={cancellingAppointmentId === appointment.appointment_id}
                               className="text-red-600 border-red-200 hover:bg-red-50"
                             >
@@ -543,7 +549,7 @@ const AppointmentsPage = () => {
                       >
                         Previous
                       </Button>
-                      
+
                       <div className="flex gap-1">
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                           <Button
@@ -557,7 +563,7 @@ const AppointmentsPage = () => {
                           </Button>
                         ))}
                       </div>
-                      
+
                       <Button
                         variant="outline"
                         size="sm"

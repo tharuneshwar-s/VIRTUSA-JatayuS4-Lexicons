@@ -8,7 +8,7 @@
 
 ## Introduction
 
-A comprehensive healthcare data ingestion service designed to automatically ingest, validate, and process healthcare pricing data from file systems. The service monitors directories for healthcare data files (CSV/Excel), processes them with intelligent change detection, and stores the processed data in a Supabase database with full relationship management.
+This is the FTP File upload Service designed to automatically ingest, validate, and process healthcare pricing data from file systems. The service monitors directories for healthcare data files (CSV/Excel)
 
 **Key Capabilities:**
 - **Sequential Processing**: Reliable file-by-file processing with comprehensive error handling
@@ -198,6 +198,43 @@ Insurance Benefits: ""
 - Docker & Docker Compose (for containerized deployment)
 - Supabase account and database
 - Access to healthcare data files (CSV/Excel format)
+- FileZilla Server (for FTP server setup)
+
+### FTP Server Setup with FileZilla
+
+**Video Tutorial: FileZilla Admin Setup**
+> [Watch the complete FileZilla setup guide](PLACEHOLDER_FILEZILLA_SETUP_VIDEO_URL)
+
+**Download Required Software:**
+- **FileZilla Server**: [Download here](https://filezilla-project.org/download.php?type=server)
+- **FileZilla Client**: [Download here](https://filezilla-project.org/download.php?type=client)
+
+**Quick Setup Steps:**
+1. Install FileZilla Server on your system
+2. Configure user accounts and permissions
+3. Set up FTP directories for healthcare data
+4. Configure network settings and ports
+5. Test connection with FileZilla Client
+
+### Sample File Upload Demo
+
+**📹 Video Tutorial: File Upload Demonstration**
+> [Watch the sample file upload process](PLACEHOLDER_FILE_UPLOAD_DEMO_VIDEO_URL)
+
+This demo shows:
+- How to connect to the FTP server
+- Uploading healthcare data files (CSV/Excel)
+- File organization and naming conventions
+- Monitoring automatic processing
+
+**📄 Sample FTP Configuration File**
+> [ftp_source.csv](./samples/filezilla_admin_setup/ftp_source.csv) - Sample FTP server configuration with hospital accounts
+
+The sample configuration includes:
+- Hospital provider accounts (Hospital_1, Hospital_2, Hospital_3, Hospital_4)
+- FTP connection parameters (host, port, credentials)
+- Remote directory paths for each hospital
+- Active status flags for monitoring
 
 ### Method 1: Docker Installation (Recommended)
 
