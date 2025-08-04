@@ -7,10 +7,14 @@
 
 A comprehensive healthcare platform that enables users to search for healthcare providers, compare prices, book appointments, and manage their healthcare journey with integrated insurance pricing and Google Calendar synchronization.
 
-## 📹 Demo Video
+## Demo Video
 
 **Web Application Demo**
-> [Watch the complete PriceAI webapp demonstration](PLACEHOLDER_WEBAPP_DEMO_VIDEO_URL)
+
+
+https://github.com/user-attachments/assets/edf549fa-aec9-40f6-a4f1-853d2f5e328f
+
+
 
 This demo showcases:
 - Healthcare provider search and filtering
