@@ -7,11 +7,22 @@
 
 A comprehensive healthcare platform that enables users to search for healthcare providers, compare prices, book appointments, and manage their healthcare journey with integrated insurance pricing and Google Calendar synchronization.
 
+## 📹 Demo Video
+
+**Web Application Demo**
+> [Watch the complete PriceAI webapp demonstration](PLACEHOLDER_WEBAPP_DEMO_VIDEO_URL)
+
+This demo showcases:
+- Healthcare provider search and filtering
+- Price comparison across different providers
+- View Insurance pricing
+- Appointment booking with calendar sync
+- Provider ratings and reviews system
+- AI healthcare chatbot assistance
+
 ## Folder Structure
 
 ```
-├── docker-compose.yml
-├── Dockerfile
 ├── eslint.config.mjs
 ├── middleware.ts
 ├── next-env.d.ts
@@ -186,9 +197,14 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_SUPABASE_ROLE_KEY=your_supabase_role_key
 
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_ROLE_KEY=your_supabase_role_key
+
 NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
 GEMINI_API_KEY=your_gemini_api_key
 
+NEXT_PUBLIC_APP_URL=http://localhost:3001
 NEXT_PUBLIC_REST_API_URL=http://localhost:8001
 NEXT_PUBLIC_REST_API_PREFIX=/api
 NEXT_PUBLIC_REST_API_VERSION=v1
@@ -206,8 +222,8 @@ GOOGLE_REDIRECT_URI=http://localhost:3001/auth/google-calendar/callback
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd PRICEAI_WEBAPP
+   git clone https://github.com/tharuneshwar-s/VIRTUSA-JatayuS4-Lexicons.git
+   cd VIRTUSA-JatayuS4-Lexicons/PRICEAI_WEBAPP
    ```
 
 2. **Install dependencies**
@@ -217,8 +233,13 @@ GOOGLE_REDIRECT_URI=http://localhost:3001/auth/google-calendar/callback
    yarn install
    ```
 
+3. **Setup environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env file with your configuration
+   ```
 
-5. **Run the development server**
+4. **Run the development server**
    ```bash
    npm run dev
    # or
@@ -226,7 +247,7 @@ GOOGLE_REDIRECT_URI=http://localhost:3001/auth/google-calendar/callback
    ```
 
 6. **Access the application**
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
+   Open [http://localhost:3001](http://localhost:3001) in your browser.
 
 ## API Routes
 
@@ -345,28 +366,6 @@ Sends appointment cancellation notification.
 
 ### Provider Data API
 
-#### `GET /api/ratings/providers`
-Retrieves provider ratings and reviews data.
-
-**Query Parameters:**
-- `provider_id` - Filter by specific provider
-- `limit` - Number of results (default: 10)
-- `offset` - Pagination offset
-
-**Response:**
-```json
-{
-  "providers": [
-    {
-      "provider_id": "uuid",
-      "average_rating": 4.5,
-      "total_reviews": 150,
-      "latest_reviews": [...]
-    }
-  ]
-}
-```
-
 #### `POST /api/reviews`
 Submits a new provider review.
 
@@ -374,10 +373,50 @@ Submits a new provider review.
 ```json
 {
   "provider_id": "uuid",
-  "user_id": "uuid",
+  "service_id": "uuid",
   "rating": 5,
-  "review_text": "Excellent service and care",
-  "appointment_id": "uuid"
+  "reviews": "Excellent service and care",
+  "user_id": "uuid"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Review submitted successfully",
+  "data": {
+    "review_id": "uuid",
+    "provider_id": "uuid",
+    "rating": 5
+  }
+}
+```
+
+#### `GET /api/ratings/providers`
+Retrieves provider ratings and reviews data from the backend API.
+
+**Query Parameters:**
+- `providerIds` - Comma-separated list of provider IDs (required)
+
+**Example:** `/api/ratings/providers?providerIds=123,456,789`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "providerId": 123,
+      "averageRating": 4.5,
+      "totalReviews": 150
+    },
+    {
+      "providerId": 456,
+      "averageRating": 4.2,
+      "totalReviews": 89
+    }
+  ]
 }
 ```
 
@@ -389,7 +428,6 @@ Submits a new provider review.
 - **Database:** PostgreSQL (via Supabase)
 - **Authentication:** Supabase Auth
 - **External APIs:** Google Calendar API, Insurance pricing APIs
-- **Deployment:** Docker support included
 
 ## Team
 

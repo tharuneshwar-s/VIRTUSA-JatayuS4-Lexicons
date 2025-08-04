@@ -259,8 +259,8 @@ Each location contains both CSV and Excel formats for comprehensive testing and 
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd FTP_CLIENT
+   git clone https://github.com/tharuneshwar-s/VIRTUSA-JatayuS4-Lexicons.git
+   cd VIRTUSA-JatayuS4-Lexicons/FTP_MODULE/FTP_CLIENT
    ```
 
 2. **Create environment file**
@@ -305,8 +305,8 @@ Each location contains both CSV and Excel formats for comprehensive testing and 
 
 1. **Clone and setup virtual environment**
    ```bash
-   git clone <repository-url>
-   cd FTP_CLIENT
+   git clone https://github.com/tharuneshwar-s/VIRTUSA-JatayuS4-Lexicons.git
+   cd VIRTUSA-JatayuS4-Lexicons/FTP_MODULE/FTP_CLIENT
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```

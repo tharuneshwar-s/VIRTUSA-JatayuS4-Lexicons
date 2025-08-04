@@ -175,8 +175,8 @@ LOGS_DIR=logs                             # Log files directory
 
 1. Clone the repository
    ```bash
-   git clone <repository-url>
-   cd priceai-api
+   git clone https://github.com/tharuneshwar-s/VIRTUSA-JatayuS4-Lexicons.git
+   cd VIRTUSA-JatayuS4-Lexicons/PRICEAI_API
    ```
 
 2. Create virtual environment and activate it
