@@ -11,6 +11,7 @@ Routes:
 import asyncio
 import httpx
 import logging
+import traceback
 from fastapi import APIRouter, HTTPException, Query, Path, status, Request
 from database.connections import supabase
 from typing import List, Optional, Dict, Any
@@ -96,11 +97,6 @@ def get_all_providers(
                 if provider_id and provider_id not in provider_ids_seen:
                     provider_ids_seen.add(provider_id)
                     all_providers.append(provider)
-
-        # Apply final pagination
-        start_idx = skip
-        end_idx = skip + limit
-        paginated_providers = all_providers[start_idx:end_idx]
 
         # Apply final pagination
         start_idx = skip
@@ -393,6 +389,7 @@ async def get_providers_with_pricing(
             """
             )
             .eq("provider_services.service_id", service_id)
+            .eq("service_pricing.service_id", service_id)
             .in_("provider_id", provider_ids)
         )
 
@@ -575,8 +572,6 @@ async def get_providers_with_pricing(
         )
     except Exception as e:
         # Log the full exception with traceback for debugging
-        import traceback
-
         logger.error(f"Error getting providers with pricing: {str(e)}")
         logger.error(traceback.format_exc())
 
