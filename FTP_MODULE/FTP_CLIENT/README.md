@@ -203,7 +203,9 @@ Insurance Benefits: ""
 ### FTP Server Setup with FileZilla
 
 **Video Tutorial: FileZilla Admin Setup**
-> [Watch the complete FileZilla setup guide](PLACEHOLDER_FILEZILLA_SETUP_VIDEO_URL)
+
+https://github.com/user-attachments/assets/0a738f0c-5eae-4e19-a00f-2fc12d14557a
+
 
 **Download Required Software:**
 - **FileZilla Server**: [Download here](https://filezilla-project.org/download.php?type=server)
@@ -218,8 +220,10 @@ Insurance Benefits: ""
 
 ### Sample File Upload Demo
 
-**📹 Video Tutorial: File Upload Demonstration**
-> [Watch the sample file upload process](PLACEHOLDER_FILE_UPLOAD_DEMO_VIDEO_URL)
+**Video Tutorial: File Upload Demonstration**
+
+https://github.com/user-attachments/assets/9556dd52-ddba-4129-aa91-96d7fb045123
+
 
 This demo shows:
 - How to connect to the FTP server
