@@ -50,16 +50,14 @@ This demo showcases:
     │   │       └── page.tsx
     │   ├── api/
     │   │   ├── appointments/
+    │   │   │   ├── cancel/
+    │   │   │   │   └── route.ts
     │   │   │   └── create/
     │   │   │       └── route.ts
     │   │   ├── google-calendar/
-    │   │   │   ├── connect/
-    │   │   │   │   └── route.ts
     │   │   │   ├── create-event/
     │   │   │   │   └── route.ts
-    │   │   │   ├── delete-event/
-    │   │   │   │   └── route.ts
-    │   │   │   └── status/
+    │   │   │   └── delete-event/
     │   │   │       └── route.ts
     │   │   ├── ratings/
     │   │   │   └── providers/
@@ -94,7 +92,6 @@ This demo showcases:
     │   │   ├── ProviderRating.tsx
     │   │   └── ViewHospitalDetails.tsx
     │   ├── profile/
-    │   │   ├── HealthDocuments.tsx
     │   │   └── ProfilePage.tsx
     │   ├── search/
     │   │   ├── LocationSearch.tsx
@@ -129,6 +126,7 @@ This demo showcases:
     │       ├── server.ts
     │       └── supabase.ts
     ├── services/
+    │   ├── middleware.ts
     │   ├── appointments/
     │   │   └── AppointmentService.ts
     │   ├── auth/
@@ -150,30 +148,50 @@ This demo showcases:
 
 ## File Descriptions
 
-### Core Application Files
-- **`middleware.ts`** - Next.js middleware for authentication and route protection
-- **`next.config.ts`** - Next.js configuration with TypeScript support
-- **`package.json`** - Project dependencies and scripts
-
 ### App Directory
 - **`app/layout.tsx`** - Root layout component with global providers
 - **`app/(home)/page.tsx`** - Main landing page with provider search
+- **`app/(home)/layout.tsx`** - Layout wrapper for authenticated home routes
 - **`app/auth/login/page.tsx`** - Authentication login page
-- **`app/appointments/page.tsx`** - User appointments management page
-- **`app/profile/page.tsx`** - User profile and settings page
+- **`app/auth/callback/page.tsx`** - OAuth callback handler for authentication
+- **`app/(home)/appointments/page.tsx`** - User appointments management page
+- **`app/(home)/profile/page.tsx`** - User profile and settings page
+- **`app/error/page.tsx`** - Global error boundary page
+- **`app/not-found.tsx`** - Custom 404 page for unmatched routes
+
+### API Routes
+- **`api/appointments/create/route.ts`** - Creates new appointments with calendar sync
+- **`api/appointments/cancel/route.ts`** - Cancels appointments and removes calendar events
+- **`api/google-calendar/create-event/route.ts`** - Creates Google Calendar events for appointments
+- **`api/google-calendar/delete-event/route.ts`** - Deletes Google Calendar events
+- **`api/reviews/route.ts`** - Handles provider review submissions
+- **`api/ratings/providers/route.ts`** - Fetches provider ratings and reviews data
+- **`api/send-appointment-email/route.ts`** - Sends appointment confirmation emails
+- **`api/send-cancellation-email/route.ts`** - Sends appointment cancellation notifications
 
 ### Components
 - **`AppointmentBooking.tsx`** - Modal component for booking appointments with insurance selection
+- **`AppointmentsPage.tsx`** - Complete appointments management with filtering and pagination
 - **`Header.tsx`** - Navigation header with authentication and search
 - **`ProviderCard.tsx`** - Provider display card with ratings and pricing
+- **`AllHospitalSection.tsx`** - Provider listing section with search and filtering
+- **`RecommendedSection.tsx`** - AI-powered provider recommendations display
 - **`Chatbot.tsx`** - AI-powered healthcare assistance chatbot
 - **`CompareHospitals.tsx`** - Side-by-side provider comparison tool
+- **`FilterSidebar.tsx`** - Advanced filtering interface for provider search
+- **`ViewHospitalDetails.tsx`** - Detailed provider information and booking interface
+- **`ProviderRating.tsx`** - Provider rating display and submission component
+- **`ProfilePage.tsx`** - User profile management with Google Calendar integration
+- **`LocationSearch.tsx`** - Location-based provider search with geolocation
+- **`ServiceSearch.tsx`** - Healthcare service search and filtering
+- **`CalendarAPITest.tsx`** - Development component for testing Google Calendar integration
 
 ### Services
 - **`AppointmentService.ts`** - Handles appointment CRUD operations via API
 - **`AuthService.ts`** - User authentication and session management
 - **`GoogleCalendarService.ts`** - Google Calendar integration for appointment sync
 - **`LocationService.tsx`** - Location-based provider search functionality
+- **`services/Recommendation/`** - AI recommendation engine with Gemini integration
 
 ### Context & State Management
 - **`AuthContext.tsx`** - Global authentication state management
@@ -184,6 +202,11 @@ This demo showcases:
 - **`lib/supabase/`** - Supabase database client configuration
 - **`lib/calendar.ts`** - Calendar utilities for appointment scheduling
 - **`lib/utils.ts`** - Common utility functions and helpers
+
+### Type Definitions
+- **`types/LocationTypes.ts`** - TypeScript interfaces for location data
+- **`types/ProviderCardTypes.ts`** - Type definitions for provider data structures
+- **`types/ReviewTypes.ts`** - Review and rating data type definitions
 
 ## Installation & Setup
 
@@ -289,89 +312,90 @@ Creates a new appointment with insurance pricing and optional calendar sync.
     "appointment_id": "uuid",
     "user_id": "uuid",
     "appointment_date": "2025-08-15",
-    "status": "PENDING"
+    "status": "PENDING",
+    "google_calendar_event_id": "calendar_event_id"
   },
-  "calendar_sync": {
-    "status": "success",
-    "message": "Calendar event created successfully"
+  "message": "Appointment created successfully"
+}
+```
+
+#### `POST /api/appointments/cancel`
+Cancels an existing appointment and removes associated calendar events.
+
+**Request Body:**
+```json
+{
+  "appointmentId": "uuid"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Appointment cancelled successfully",
+  "data": {
+    "appointment_id": "uuid",
+    "status": "CANCELLED",
+    "calendar_event_deleted": true
   }
 }
 ```
 
 ### Google Calendar API
 
-#### `POST /api/google-calendar/connect`
-Initiates Google Calendar OAuth connection for the authenticated user.
+#### `POST /api/google-calendar/create-event`
+Creates a calendar event for an appointment using stored OAuth tokens.
+
+**Request Body:**
+```json
+{
+  "userId": "uuid",
+  "appointmentId": "uuid",
+  "title": "Appointment with Dr. Smith",
+  "description": "Healthcare consultation appointment",
+  "start_time": "2025-08-15T10:30:00",
+  "end_time": "2025-08-15T11:00:00",
+  "location": "123 Medical Center Dr, Health City"
+}
+```
 
 **Response:**
 ```json
 {
   "success": true,
-  "auth_url": "https://accounts.google.com/oauth2/auth?..."
+  "data": {
+    "event_id": "google_calendar_event_id",
+    "html_link": "https://calendar.google.com/event?eid=...",
+    "status": "confirmed"
+  },
+  "message": "Calendar event created successfully"
 }
 ```
 
-#### `POST /api/google-calendar/create-event`
-Creates a calendar event for an appointment (requires valid OAuth tokens).
+#### `POST /api/google-calendar/delete-event`
+Deletes a Google Calendar event associated with an appointment.
 
 **Request Body:**
 ```json
 {
-  "appointment_id": "uuid",
-  "user_id": "uuid",
-  "title": "Appointment with Dr. Smith",
-  "description": "Healthcare appointment",
-  "start_time": "2025-08-15T10:30:00",
-  "end_time": "2025-08-15T11:00:00"
+  "eventId": "google_calendar_event_id",
+  "userId": "uuid"
 }
 ```
-
-#### `GET /api/google-calendar/status`
-Checks Google Calendar connection status for the authenticated user.
 
 **Response:**
 ```json
 {
-  "connected": true,
-  "email": "user@gmail.com",
-  "expires_at": "2025-08-15T10:30:00Z"
+  "success": true,
+  "message": "Calendar event deleted successfully"
 }
 ```
 
-### Email Notifications API
-
-#### `POST /api/send-appointment-email`
-Sends appointment confirmation email to patient.
-
-**Request Body:**
-```json
-{
-  "appointmentId": "uuid",
-  "patientEmail": "patient@example.com",
-  "patientName": "John Doe",
-  "providerName": "Dr. Smith Medical Center",
-  "appointmentDate": "2025-08-15",
-  "appointmentTime": "10:30 AM",
-  "estimatedCost": 150.00
-}
-```
-
-#### `POST /api/send-cancellation-email`
-Sends appointment cancellation notification.
-
-**Request Body:**
-```json
-{
-  "appointmentId": "uuid",
-  "patientEmail": "patient@example.com",
-  "reason": "Provider schedule change"
-}
-```
-
-### Provider Data API
+### Provider Reviews & Ratings API
 
 #### `POST /api/reviews`
-Submits a new provider review.
+Submits a new provider review and rating.
 
 **Request Body:**
 ```json
@@ -379,7 +403,7 @@ Submits a new provider review.
   "provider_id": "uuid",
   "service_id": "uuid",
   "rating": 5,
-  "reviews": "Excellent service and care",
+  "reviews": "Excellent service and professional care. Highly recommended!",
   "user_id": "uuid"
 }
 ```
@@ -392,13 +416,14 @@ Submits a new provider review.
   "data": {
     "review_id": "uuid",
     "provider_id": "uuid",
-    "rating": 5
+    "rating": 5,
+    "created_at": "2025-08-15T10:30:00Z"
   }
 }
 ```
 
 #### `GET /api/ratings/providers`
-Retrieves provider ratings and reviews data from the backend API.
+Retrieves aggregated provider ratings and reviews data.
 
 **Query Parameters:**
 - `providerIds` - Comma-separated list of provider IDs (required)
@@ -413,16 +438,115 @@ Retrieves provider ratings and reviews data from the backend API.
     {
       "providerId": 123,
       "averageRating": 4.5,
-      "totalReviews": 150
+      "totalReviews": 150,
+      "ratingDistribution": {
+        "5": 85,
+        "4": 35,
+        "3": 20,
+        "2": 7,
+        "1": 3
+      }
     },
     {
       "providerId": 456,
       "averageRating": 4.2,
-      "totalReviews": 89
+      "totalReviews": 89,
+      "ratingDistribution": {
+        "5": 45,
+        "4": 30,
+        "3": 10,
+        "2": 3,
+        "1": 1
+      }
     }
   ]
 }
 ```
+
+### Email Notification API
+
+#### `POST /api/send-appointment-email`
+Sends appointment confirmation email to patient.
+
+**Request Body:**
+```json
+{
+  "appointmentId": "uuid",
+  "patientEmail": "patient@example.com",
+  "patientName": "John Doe",
+  "providerName": "Dr. Smith Medical Center",
+  "appointmentDate": "2025-08-15",
+  "appointmentTime": "10:30 AM",
+  "estimatedCost": 150.00,
+  "insuranceName": "Blue Cross Blue Shield",
+  "location": "123 Medical Center Dr, Health City"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Appointment confirmation email sent successfully",
+  "data": {
+    "email_sent": true,
+    "recipient": "patient@example.com",
+    "subject": "Appointment Confirmation - Dr. Smith Medical Center"
+  }
+}
+```
+
+#### `POST /api/send-cancellation-email`
+Sends appointment cancellation notification to patient.
+
+**Request Body:**
+```json
+{
+  "appointmentId": "uuid",
+  "patientEmail": "patient@example.com",
+  "patientName": "John Doe",
+  "providerName": "Dr. Smith Medical Center",
+  "appointmentDate": "2025-08-15",
+  "appointmentTime": "10:30 AM",
+  "reason": "Provider schedule change",
+  "rescheduling_available": true
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Cancellation notification sent successfully",
+  "data": {
+    "email_sent": true,
+    "recipient": "patient@example.com",
+    "subject": "Appointment Cancellation - Dr. Smith Medical Center"
+  }
+}
+```
+
+### Error Responses
+
+All API endpoints return consistent error responses:
+
+```json
+{
+  "success": false,
+  "error": "Error message description",
+  "code": "ERROR_CODE",
+  "details": {
+    "field": "Additional error details if applicable"
+  }
+}
+```
+
+**Common HTTP Status Codes:**
+- `200` - Success
+- `400` - Bad Request (missing or invalid parameters)
+- `401` - Unauthorized (authentication required)
+- `404` - Not Found (resource doesn't exist)
+- `500` - Internal Server Error (server-side error)
 
 ---
 

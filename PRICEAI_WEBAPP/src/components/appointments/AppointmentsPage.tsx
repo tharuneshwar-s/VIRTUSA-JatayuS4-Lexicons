@@ -24,6 +24,7 @@ import { Input } from '../ui/input';
 import { Select } from '../ui/select';
 import { formatCurrency } from '@/lib/utils';
 import { openGoogleCalendar, downloadICSFile } from '@/lib/calendar';
+import appointmentService from '@/services/appointments/AppointmentService';
 
 interface Appointment {
   appointment_id: string;
@@ -56,7 +57,8 @@ interface Appointment {
 }
 
 const AppointmentsPage = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+
   const supabase = createClientComponentClient();
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -75,7 +77,6 @@ const AppointmentsPage = () => {
     { label: 'Confirmed', value: 'CONFIRMED' },
     { label: 'Completed', value: 'COMPLETED' },
     { label: 'Cancelled', value: 'CANCELLED' },
-    { label: 'No Show', value: 'NO_SHOW' }
   ];
 
   const sortOptions = [
@@ -86,11 +87,11 @@ const AppointmentsPage = () => {
   ];
 
   useEffect(() => {
-    if (user) {
-      fetchAppointments();
-      updateExpiredAppointments();
-    }
-  }, [user]);
+  
+
+    fetchAppointments();
+    updateExpiredAppointments();
+  }, [user, authLoading]);
 
   const updateExpiredAppointments = async () => {
     if (!user) return;
@@ -132,7 +133,7 @@ const AppointmentsPage = () => {
           services(service_name, service_category)
         `)
         .eq('user_id', user.id)
-        .order('appointment_date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
@@ -150,52 +151,17 @@ const AppointmentsPage = () => {
       return;
     }
 
-    
-
     setCancellingAppointmentId(appointmentId);
 
     try {
-      // Get the appointment details before cancelling for email
-      const appointmentToCancel = appointments.find(apt => apt.appointment_id === appointmentId);
+      const success = await appointmentService.cancelAppointment(appointmentId);
 
-      const { error } = await supabase
-        .from('appointments')
-        .update({ status: 'CANCELLED' })
-        .eq('appointment_id', appointmentId);
-
-      if (error) throw error;
-
-      //console.log('Appointment cancelled successfully:', appointmentId);
-      // Send cancellation email
-      if (appointmentToCancel) {
-        try {
-          await fetch('/api/send-cancellation-email', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              appointmentId: appointmentToCancel.appointment_id,
-              patientEmail: appointmentToCancel.patient_email,
-              patientName: appointmentToCancel.patient_name,
-              providerName: appointmentToCancel.providers.provider_name,
-              serviceName: appointmentToCancel.services.service_name,
-              appointmentDate: appointmentToCancel.appointment_date,
-              appointmentTime: appointmentToCancel.appointment_time,
-              appointmentPeriod: appointmentToCancel.appointment_period,
-              providerAddress: appointmentToCancel.providers.provider_address,
-              providerPhone: appointmentToCancel.providers.provider_phone
-            })
-          });
-        } catch (emailError) {
-          console.error('Failed to send cancellation email:', emailError);
-          // Don't fail the cancellation if email fails
-        }
+      if (success) {
+        console.log('Appointment cancelled successfully:', appointmentId);
+        window.location.reload(); // Reload to reflect changes
+      } else {
+        throw new Error('Failed to cancel appointment');
       }
-
-      // Refresh appointments
-      fetchAppointments();
-      // alert('Appointment cancelled successfully. A cancellation email has been sent.');
     } catch (error: any) {
       console.error('Error cancelling appointment:', error);
       alert('Failed to cancel appointment. Please try again.');
@@ -335,11 +301,22 @@ const AppointmentsPage = () => {
           </CardContent>
         </Card>
 
-        {loading ? (
+        {(authLoading || loading) ? (
           <div className="text-center py-12">
             <div className="animate-spin w-8 h-8 border-4 border-priceai-blue border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-priceai-gray">Loading appointments...</p>
+            <p className="text-priceai-gray">
+              {authLoading ? 'Loading user...' : 'Loading appointments...'}
+            </p>
           </div>
+        ) : !authLoading && !user ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <AlertCircle className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
+              <h3 className="text-xl font-semibold text-priceai-dark mb-2">Authentication Required</h3>
+              <p className="text-priceai-gray mb-4">Please sign in to view your appointments.</p>
+              <Button onClick={() => window.location.href = '/auth/login'}>Sign In</Button>
+            </CardContent>
+          </Card>
         ) : error ? (
           <Card>
             <CardContent className="p-8 text-center">

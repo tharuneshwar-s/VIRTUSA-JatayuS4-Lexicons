@@ -299,8 +299,6 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = ({
         estimatedCost = provider.standardCharge || 0;
       }
       
-
-
       const data = await appointmentService.createAppointment({
         user_id: user.id,
         provider_id: provider.provider_id,

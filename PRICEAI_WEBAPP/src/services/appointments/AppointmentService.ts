@@ -45,32 +45,30 @@ class AppointmentService {
   /**
    * Create a new appointment
    */
-  async createAppointment(
-    appointmentData: AppointmentData
-  ): Promise<any> {
+  async createAppointment(appointmentData: AppointmentData): Promise<any> {
     try {
-  
       // Call the API endpoint instead of direct Supabase call
-      const response = await fetch('/api/appointments/create', {
-        method: 'POST',
+      const response = await fetch("/api/appointments/create", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({...appointmentData, sync_with_calendar: true}),
+        body: JSON.stringify({ ...appointmentData, sync_with_calendar: true }),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        console.error('[AppointmentService] API error:', result);
-        throw new Error(result.error || `HTTP error! status: ${response.status}`);
+        console.error("[AppointmentService] API error:", result);
+        throw new Error(
+          result.error || `HTTP error! status: ${response.status}`
+        );
       }
 
       if (!result.success || !result.data) {
-        throw new Error('Invalid response from appointment creation API');
+        throw new Error("Invalid response from appointment creation API");
       }
 
- 
       return result.data;
     } catch (error: any) {
       console.error("[AppointmentService] Error creating appointment:", error);
@@ -136,44 +134,35 @@ class AppointmentService {
   }
 
   /**
-   * Update appointment status
+   * Cancel appointment
    */
-  async updateAppointmentStatus(
-    appointmentId: string,
-    status: string
-  ): Promise<boolean> {
+  async cancelAppointment(appointmentId: string): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from("appointments")
-        .update({
-          status,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("appointment_id", appointmentId);
+      const response = await fetch("/api/appointments/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ appointmentId }),
+      });
 
-      if (error) {
-        console.error(
-          "[AppointmentService] Error updating appointment status:",
-          error
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("[AppointmentService] API error:", result);
+        throw new Error(
+          result.error || `HTTP error! status: ${response.status}`
         );
-        return false;
       }
 
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error(
-        "[AppointmentService] Error updating appointment status:",
+        "[AppointmentService] Error cancelling appointment:",
         error
       );
       return false;
     }
-  }
-
-  /**
-   * Cancel appointment
-   */
-  async cancelAppointment(appointmentId: string): Promise<boolean> {
-    return this.updateAppointmentStatus(appointmentId, "CANCELLED");
   }
 }
 

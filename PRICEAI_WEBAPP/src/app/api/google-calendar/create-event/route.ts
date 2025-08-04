@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import GoogleCalendarService from '@/services/GoogleCalendar/GoogleCalendarService';
 import { createClient } from '@/lib/supabase/server';
-import { supabase } from '../../../../lib/supabase/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,53 +18,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user's session to access Google Calendar tokens
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Fetch user's Google Calendar tokens from the database
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('google_access_token, google_refresh_token, google_calendar_enabled')
+      .eq('id', appointmentDetails.userId)
+      .single();
 
-    console.log("Session data on create event:", session);
-
-    if (sessionError || !session || !session.access_token || !session.refresh_token) {
-      console.log('Calendar access check:', {
-        sessionError: sessionError,
-        hasSession: session,
-        hasAccessToken: session?.access_token,
-        hasRefreshToken: session?.refresh_token,
-      });
-      return NextResponse.json({
-        success: false,
-        error: 'Google Calendar not connected or session expired',
-        requiresAuth: true,
-      });
+    if (userError) {
+      console.error('Error fetching user data:', userError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to fetch user Google Calendar credentials',
+        },
+        { status: 500 }
+      );
     }
 
-    console.log('User calendar tokens found from session:', {
-      userId: appointmentDetails.userId,
-      hasAccessToken: !!session.access_token,
-      hasRefreshToken: !!session.refresh_token,
-    });
+    if (!userData.google_access_token || !userData.google_refresh_token) {
+      // console.log('User does not have Google Calendar tokens stored');
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Google Calendar not connected. Please connect your Google account first.',
+          requiresReauth: true,
+        },
+        { status: 401 }
+      );
+    }
+
 
     // Create calendar event
     const googleCalendarService = new GoogleCalendarService();
     googleCalendarService.setAccessToken(
-      session.access_token,
-      session.refresh_token
+      userData.google_access_token,
+      userData.google_refresh_token
     );
 
     let eventResult = await googleCalendarService.createAppointmentEvent(appointmentDetails);
 
     // Handle invalid_grant error by attempting token refresh
     if (!eventResult.success && eventResult.error && (eventResult.error.includes('invalid_grant') || eventResult.error.includes('invalid credential'))) {
-      console.log('Received invalid token error, attempting token refresh...');
+      // console.log('\n\n\nReceived invalid token error, attempting token refresh...');
       
       try {
         const refreshResult = await googleCalendarService.refreshAccessToken();
+
+        // console.log('Token refresh result:', refreshResult);
         if (refreshResult.success && refreshResult.accessToken) {
-          console.log('Access token refreshed, retrying event creation...');
+          // console.log('Access token refreshed, retrying event creation...');
+          
+          // Update the new tokens in the database
+          const { error: updateTokenError } = await supabase
+            .from('users')
+            .update({
+              google_access_token: refreshResult.accessToken,
+              google_refresh_token: refreshResult.refreshToken || userData.google_refresh_token,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', appointmentDetails.userId);
+
+          if (updateTokenError) {
+            console.error('Error updating tokens in database:', updateTokenError);
+          } else {
+            // console.log('Tokens updated successfully in database');
+          }
           
           // Set the new token and retry
           googleCalendarService.setAccessToken(
             refreshResult.accessToken,
-            session.refresh_token
+            refreshResult.refreshToken || userData.google_refresh_token
           );
           
           // Retry event creation
