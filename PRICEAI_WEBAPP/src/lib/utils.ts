@@ -18,6 +18,46 @@ export const formatDistance = (distance: any) => {
   return distance < 10 ? `${distance.toFixed(1)} miles away` : `${Math.round(distance)} miles away`;
 };
 
+/**
+ * Parse date string (YYYY-MM-DD) without timezone shifts
+ */
+export function parseDateWithoutTimezone(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day); // Month is 0-indexed
+}
+
+/**
+ * Format appointment date for display
+ */
+export function formatAppointmentDate(dateString: string, options?: Intl.DateTimeFormatOptions): string {
+  const date = parseDateWithoutTimezone(dateString);
+  return date.toLocaleDateString('en-US', options || {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+/**
+ * Create appointment datetime from date, time, and period
+ */
+export function createAppointmentDateTime(dateString: string, timeString: string, period: 'AM' | 'PM'): Date {
+  const [hours, minutes] = timeString.split(':').map(Number);
+  let hour24 = hours;
+  
+  // Convert to 24-hour format
+  if (period === 'PM' && hours < 12) {
+    hour24 = hours + 12;
+  } else if (period === 'AM' && hours === 12) {
+    hour24 = 0;
+  }
+  
+  const appointmentDate = parseDateWithoutTimezone(dateString);
+  appointmentDate.setHours(hour24, minutes, 0, 0);
+  return appointmentDate;
+}
+
 // Time utility functions
 export function getCurrentDateTime(): Date {
   return new Date();

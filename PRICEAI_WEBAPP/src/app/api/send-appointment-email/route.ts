@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { formatAppointmentDate } from '@/lib/utils';
 
 // Email configuration
 const transporter = nodemailer.createTransport({
@@ -29,13 +30,8 @@ export async function POST(request: NextRequest) {
       providerPhone
     } = await request.json();
 
-    // Format the date for better readability
-    const formattedDate = new Date(appointmentDate).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    // Format the date for better readability - avoid timezone shifts
+    const formattedDate = formatAppointmentDate(appointmentDate);
 
     // Use the provided time and period
     const formattedTime = `${appointmentTime} ${appointmentPeriod}`;

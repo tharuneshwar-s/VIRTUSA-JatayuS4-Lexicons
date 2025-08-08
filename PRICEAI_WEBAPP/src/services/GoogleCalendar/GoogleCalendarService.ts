@@ -1,4 +1,4 @@
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, createAppointmentDateTime } from '@/lib/utils';
 import { google } from 'googleapis';
 
 export interface CalendarEvent {
@@ -249,46 +249,55 @@ class GoogleCalendarService {
     try {
       // Use dynamic time zone if not provided
       const tz = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
-      // Parse the time and period
-      const [hours, minutes] = time.split(':').map(Number);
-      let hour24 = hours;
-
-      // Convert to 24-hour format
-      if (period === 'PM' && hours < 12) {
-        hour24 = hours + 12;
-      } else if (period === 'AM' && hours === 12) {
-        hour24 = 0;
-      }
-
-      // Use the timeZone parameter for logging (for future use with libraries like luxon/moment-timezone)
-      const dateStr = date.includes('T') ? date.split('T')[0] : date;
-      const timeStr = `${hour24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
-      const fullDateTimeStr = `${dateStr}T${timeStr}`;
-      console.log('Building datetime from:', { date, time, period, dateStr, timeStr, fullDateTimeStr, tz });
-
-      // For now, this is still local time, but the event will use the correct timeZone field
-      const startDate = new Date(fullDateTimeStr);
+      
+      // Create appointment datetime using utility function
+      const appointmentDate = createAppointmentDateTime(date, time, period as 'AM' | 'PM');
+      
+      console.log('Building datetime from:', { 
+        date, 
+        time, 
+        period, 
+        appointmentDate: appointmentDate.toString(),
+        tz 
+      });
 
       // Validate the date
-      if (isNaN(startDate.getTime())) {
-        throw new Error(`Invalid date created from: ${fullDateTimeStr}`);
+      if (isNaN(appointmentDate.getTime())) {
+        throw new Error(`Invalid date created from: ${date} ${time} ${period}`);
       }
 
       // Create end datetime (assuming 1-hour appointments)
-      const endDate = new Date(startDate.getTime() + (60 * 60 * 1000)); // Add 1 hour
+      const endDate = new Date(appointmentDate.getTime() + (60 * 60 * 1000)); // Add 1 hour
 
-      const startISO = startDate.toISOString();
-      const endISO = endDate.toISOString();
-      console.log('Final datetime values:', { startISO, endISO, tz });
+      // Format as local datetime string for Google Calendar
+      const startDateTime = this.formatDateTimeForCalendar(appointmentDate);
+      const endDateTime = this.formatDateTimeForCalendar(endDate);
+      
+      console.log('Final datetime values:', { startDateTime, endDateTime, tz });
 
       return {
-        dateTime: startISO,
-        endDateTime: endISO,
+        dateTime: startDateTime,
+        endDateTime: endDateTime,
       };
     } catch (error) {
       console.error('Error formatting appointment datetime:', error);
       throw new Error(`Failed to format appointment datetime: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Format a Date object for Google Calendar API
+   * Returns format: YYYY-MM-DDTHH:mm:ss
+   */
+  private formatDateTimeForCalendar(date: Date): string {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   }
 
   /**

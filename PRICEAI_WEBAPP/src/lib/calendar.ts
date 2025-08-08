@@ -1,4 +1,6 @@
 // Google Calendar utility functions
+import { createAppointmentDateTime } from './utils';
+
 interface CalendarEvent {
   appointmentId: string;
   patientName: string;
@@ -12,27 +14,30 @@ interface CalendarEvent {
 }
 
 export const createGoogleCalendarEvent = (appointment: CalendarEvent) => {
-  // Format date and time for Google Calendar
-  const date = new Date(appointment.appointmentDate);
-  const [hours, minutes] = appointment.appointmentTime.split(':').map(Number);
-  
-  // Convert to 24-hour format
-  let hour24 = hours;
-  if (appointment.appointmentPeriod === 'PM' && hours < 12) {
-    hour24 = hours + 12;
-  } else if (appointment.appointmentPeriod === 'AM' && hours === 12) {
-    hour24 = 0;
-  }
-  
-  date.setHours(hour24, minutes, 0, 0);
+  // Create appointment datetime using utility function
+  const appointmentDate = createAppointmentDateTime(
+    appointment.appointmentDate,
+    appointment.appointmentTime,
+    appointment.appointmentPeriod as 'AM' | 'PM'
+  );
   
   // End time (1 hour after start)
-  const endDate = new Date(date);
+  const endDate = new Date(appointmentDate);
   endDate.setHours(endDate.getHours() + 1);
   
-  // Format for Google Calendar URL
-  const startTime = date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const endTime = endDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  // Format for Google Calendar URL - use local date/time format
+  const formatDateForCalendar = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${year}${month}${day}T${hours}${minutes}${seconds}`;
+  };
+  
+  const startTime = formatDateForCalendar(appointmentDate);
+  const endTime = formatDateForCalendar(endDate);
   
   const eventDetails = {
     title: `${appointment.serviceName} - ${appointment.providerName}`,
@@ -41,6 +46,8 @@ export const createGoogleCalendarEvent = (appointment: CalendarEvent) => {
 Provider: ${appointment.providerName}
 Service: ${appointment.serviceName}
 Patient: ${appointment.patientName}
+Date: ${appointment.appointmentDate}
+Time: ${appointment.appointmentTime} ${appointment.appointmentPeriod}
 Location: ${appointment.providerAddress}
 Appointment ID: ${appointment.appointmentId}
 
@@ -73,26 +80,30 @@ export const openGoogleCalendar = (appointment: CalendarEvent) => {
 
 // Create .ics file for download (works with all calendar apps)
 export const createICSFile = (appointment: CalendarEvent): string => {
-  const date = new Date(appointment.appointmentDate);
-  const [hours, minutes] = appointment.appointmentTime.split(':').map(Number);
-  
-  // Convert to 24-hour format
-  let hour24 = hours;
-  if (appointment.appointmentPeriod === 'PM' && hours < 12) {
-    hour24 = hours + 12;
-  } else if (appointment.appointmentPeriod === 'AM' && hours === 12) {
-    hour24 = 0;
-  }
-  
-  date.setHours(hour24, minutes, 0, 0);
+  // Create appointment datetime using utility function
+  const appointmentDate = createAppointmentDateTime(
+    appointment.appointmentDate,
+    appointment.appointmentTime,
+    appointment.appointmentPeriod as 'AM' | 'PM'
+  );
   
   // End time (1 hour after start)
-  const endDate = new Date(date);
+  const endDate = new Date(appointmentDate);
   endDate.setHours(endDate.getHours() + 1);
   
-  // Format for ICS (UTC)
-  const startTime = date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const endTime = endDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  // Format for ICS - use local time format (DTSTART without Z suffix means local time)
+  const formatDateForICS = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${year}${month}${day}T${hours}${minutes}${seconds}`;
+  };
+  
+  const startTime = formatDateForICS(appointmentDate);
+  const endTime = formatDateForICS(endDate);
   const createdTime = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   
   const icsContent = `BEGIN:VCALENDAR
@@ -101,10 +112,10 @@ PRODID:-//PriceAI Healthcare//Appointment//EN
 BEGIN:VEVENT
 UID:${appointment.appointmentId}@priceai.healthcare
 DTSTAMP:${createdTime}Z
-DTSTART:${startTime}Z
-DTEND:${endTime}Z
+DTSTART:${startTime}
+DTEND:${endTime}
 SUMMARY:${appointment.serviceName} - ${appointment.providerName}
-DESCRIPTION:Healthcare Appointment Details:\\n\\nProvider: ${appointment.providerName}\\nService: ${appointment.serviceName}\\nPatient: ${appointment.patientName}\\nLocation: ${appointment.providerAddress}\\nAppointment ID: ${appointment.appointmentId}\\n\\nPlease arrive 15 minutes early for check-in.\\nBring your insurance card and ID.\\n\\nThis appointment was booked through PriceAI Healthcare Platform.
+DESCRIPTION:Healthcare Appointment Details:\\n\\nProvider: ${appointment.providerName}\\nService: ${appointment.serviceName}\\nPatient: ${appointment.patientName}\\nDate: ${appointment.appointmentDate}\\nTime: ${appointment.appointmentTime} ${appointment.appointmentPeriod}\\nLocation: ${appointment.providerAddress}\\nAppointment ID: ${appointment.appointmentId}\\n\\nPlease arrive 15 minutes early for check-in.\\nBring your insurance card and ID.\\n\\nThis appointment was booked through PriceAI Healthcare Platform.
 LOCATION:${appointment.providerAddress}
 STATUS:CONFIRMED
 SEQUENCE:0

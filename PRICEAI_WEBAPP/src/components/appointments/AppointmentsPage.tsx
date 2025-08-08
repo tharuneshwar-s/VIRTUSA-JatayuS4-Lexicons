@@ -22,7 +22,7 @@ import {
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Input } from '../ui/input';
 import { Select } from '../ui/select';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatAppointmentDate } from '@/lib/utils';
 import { openGoogleCalendar, downloadICSFile } from '@/lib/calendar';
 import appointmentService from '@/services/appointments/AppointmentService';
 
@@ -371,7 +371,7 @@ const AppointmentsPage = () => {
                             <Calendar className="w-4 h-4 text-priceai-blue flex-shrink-0" />
                             <div>
                               <div className="font-medium">
-                                {new Date(appointment.appointment_date).toLocaleDateString('en-US', {
+                                {formatAppointmentDate(appointment.appointment_date, {
                                   month: 'short',
                                   day: 'numeric',
                                   year: 'numeric'
